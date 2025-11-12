@@ -1,0 +1,16 @@
+correr la base de datos en docker
+
+si es la primera vez
+
+
+con docker compose up --build 
+
+
+o si ya se ha construido con
+
+docker compose up
+
+y luego correr el archivo de python, se necesitan pandas y psycopg2 preinstalados
+
+las tablas que se crean son productos y registros_inventario 
+
