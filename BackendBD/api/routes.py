@@ -12,6 +12,8 @@ from .schemas import *
 
 router = APIRouter()
 
+PRODUCTS = ["PROD-001"]
+
 
 @router.get(
     "/predict/out-of-stock",
@@ -28,7 +30,6 @@ async def predict_out_of_stock() -> Dict[str, Any]:
     """
     
     
-    PRODUCTS = ["Laptop HP", "Monitor Samsung", "Mouse Logitech"]
 
     today = date.today()
     results = []
@@ -36,13 +37,14 @@ async def predict_out_of_stock() -> Dict[str, Any]:
     for product in PRODUCTS:
         pred = predict_stock(
             product_id=product,
-            date=today.strftime("%Y-%m-%d")
-        )
+            date="2024-07-02")
+        
 
-        if pred["prediccion_stock"] <= 0:
-            results.append({
+        
+        results.append({
                 "product_name": product,
                 "predicted_stock": pred["prediccion_stock"]
+                
             })
 
     return {"out_of_stock_products": results}
@@ -92,8 +94,7 @@ async def predict_date(request: PredictDateRequest) -> Dict[str, Any]:
     Returns:
         Dict con predicciones de todos los productos para la fecha especificada
     """
-    PRODUCTS = ["Laptop HP", "Monitor Samsung", "Mouse Logitech"]
-
+    
     results = []
 
     for product in PRODUCTS:
