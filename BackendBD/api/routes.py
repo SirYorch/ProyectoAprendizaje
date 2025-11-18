@@ -4,9 +4,10 @@ Define los endpoints de la API REST.
 """
 
 from fastapi import APIRouter, Query, HTTPException, File, UploadFile
-from datetime import date
+from datetime import date , timedelta
 from typing import Dict, Any
 from model.methods import predict_stock
+from agent.agent import naturalize_response
 
 from .schemas import *
 
@@ -172,11 +173,11 @@ async def chat_with_agent(request: ChatRequest) -> Dict[str, Any]:
     Returns:
         Dict con la respuesta del agente LLM
     """
-    # TODO: Implementar integración con Deepseek-r1:8b
+    req = naturalize_response({"Producto1":"10/10/2025"},{"Producto2":"10/20/2025"})
+    
     return {
         "success": True,
-        "message": request.message,
-        "agent_response": "Hola mundo"
+        "message": req
     }
 
 

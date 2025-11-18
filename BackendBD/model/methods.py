@@ -56,6 +56,7 @@ def predict_stock(product_id: str, date: str):
     if isinstance(date, str):
         date = datetime.strptime(date, "%Y-%m-%d")
     
+    print(str(date)+" "+product_id)
     X = build_sequence(product_id, date)
     
     pred_scaled = model.predict(X)[0][0]

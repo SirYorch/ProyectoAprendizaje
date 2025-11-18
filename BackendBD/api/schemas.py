@@ -191,22 +191,12 @@ class ChatResponse(BaseModel):
     """Response del agente LLM."""
     success: bool
     message: str
-    agent_response: str
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, 
-        description="Información adicional como productos consultados, predicciones realizadas, etc."
-    )
     
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
-                "message": "Respuesta generada exitosamente",
-                "agent_response": "Según las predicciones, los productos 'Laptop HP' y 'Mouse Logitech' se agotarán en los próximos 5 días.",
-                "metadata": {
-                    "products_analyzed": 2,
-                    "prediction_confidence": 0.89
-                }
+                "message": "Respuesta generada por el agente",
             }
         }
 

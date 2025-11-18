@@ -21,24 +21,9 @@ app = FastAPI(
 # Registrar rutas HTTP
 app.include_router(http_router, prefix="/api", tags=["predicciones"])
 
-# Endpoint de health check
-@app.get("/health-check")
-async def root():
-    return {
-        "status": "online",
-        "service": "Sistema de Predicción de Inventario",
-        "version": "1.0.0"
-    }
-        
         
         
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
     
     
-# TODO: Consultas dinámicas de registros (cantidad, producto, ultima actualizacion)
-# TODO: Consultas dinámicas de productos (id, costo>, costo<, cantidad disponible, ventas diarias> , ventas diarias<)
-
-        
-
-# TODO: Conexión con deepseek
