@@ -9,10 +9,10 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-df = pd.read_csv("dataset_preparado.csv", parse_dates=["created_at"])
+df = pd.read_csv("files/dataset_preparado.csv", parse_dates=["created_at"])
 df = df.sort_values(["product_id", "created_at"])
 model = tf.keras.models.load_model("modelo.h5", compile=False)
-scaler = joblib.load("scaler.pkl")
+scaler = joblib.load("files/scaler.pkl")
 
 
 # Variables usadas en el modelo 

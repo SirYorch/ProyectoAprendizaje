@@ -273,7 +273,7 @@ def main():
     }
     
     # Ruta al archivo CSV
-    csv_file = 'dataset_inventario.csv'
+    csv_file = 'files/dataset_inventario.csv'
     print("=" * 60)
     print("   CARGA DE DATOS DE INVENTARIO A POSTGRESQL")
     print("=" * 60)

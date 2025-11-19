@@ -227,7 +227,7 @@ async def chat_with_agent(request: ChatRequest) -> Dict[str, Any]:
     classifier = IntentClassifier()
     
     # Cargar o entrenar modelo
-    model_path = "intent_classifier.pkl"
+    model_path = "files/intent_classifier.pkl"
     classifier.load_model(model_path)
     
     endpoint, confidence, label = classifier.predict_intent(request.message)

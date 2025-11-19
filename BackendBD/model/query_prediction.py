@@ -157,7 +157,7 @@ class IntentClassifier:
                 'is_trained': self.is_trained
             }, f)
     
-    def load_model(self, path: str = "intent_classifier.pkl"):
+    def load_model(self, path: str = "files/intent_classifier.pkl"):
         """
         Carga un modelo previamente entrenado.
         """
