@@ -1,0 +1,65 @@
+<div class="border-b-8 border-[#ffb703] w-full"></div>
+
+<!-- CONTENEDOR GENERAL -->
+<div class="flex flex-col items-center px-6 pt-10 text-[#0f2c63]">
+
+    <!-- TÍTULO -->
+    <div class="text-3xl font-semibold mb-6">
+        Hola, ¿en qué puedo ayudarte?
+    </div>
+
+    <!-- MENSAJES -->
+    <div class="w-full md:w-10/12 lg:w-8/12 h-[55vh] overflow-y-auto px-4 py-6 bg-white rounded-2xl shadow-md border border-[#0f2c63]/20 mb-6">
+        
+        <div *ngFor="let m of mensajes" class="mb-4 w-full">
+            
+            <!-- Mensaje mío -->
+            <div *ngIf="m.remitente === 'me'" class="flex justify-end">
+                <div class="bg-[#0f2c63] text-white px-4 py-2 rounded-3xl max-w-[75%]">
+                    {{ m.texto }}
+                </div>
+            </div>
+
+            <!-- Mensaje del bot -->
+            <div *ngIf="m.remitente === 'CHAT'" class="flex justify-start">
+                <div class="bg-[#ffb703] text-[#0f2c63] px-4 py-2 rounded-3xl max-w-[75%]">
+                    <markdown
+                     [data]="m.texto"
+                     ></markdown>
+
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- LOADING -->
+        <div *ngIf="loading" class="text-center mt-4 text-[#0f2c63] animate-pulse">
+            Pensando...
+        </div>
+
+        <!-- ERROR -->
+        <div *ngIf="error" class="text-center text-red-500 mt-4">
+            {{ error }}
+        </div>
+
+    </div>
+
+    <!-- INPUT + BOTÓN -->
+    <div class="flex w-full md:w-10/12 lg:w-8/12 gap-4 pb-10">
+        
+        <input
+            type="text"
+            [(ngModel)]="texto"
+            (keydown.enter)="enviarMensaje()"
+            placeholder="Escribe tu consulta…"
+            class="flex-1 border-2 border-[#0f2c63] rounded-full px-6 py-3 text-xl outline-none"
+        />
+
+        <button
+            (click)="enviarMensaje()"
+            class="bg-[#0f2c63] text-white px-6 py-3 rounded-full text-xl hover:bg-[#0d2452] transition">
+            Enviar
+        </button>
+    </div>
+</div>
