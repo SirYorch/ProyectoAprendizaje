@@ -20,8 +20,8 @@ SCALER_PATH = FILES_DIR / "scaler.pkl"
 # Cargar datos y modelo
 df = pd.read_csv(DATASET_PATH, parse_dates=["created_at"])
 df = df.sort_values(["product_id", "created_at"])
-model = tf.keras.models.load_model(str(MODEL_PATH), compile=False)
-scaler = joblib.load(SCALER_PATH)
+model = tf.keras.models.load_model("files/modelo.h5", compile=False)
+scaler = joblib.load("files/scaler.pkl")
 
 
 # Variables usadas en el modelo 

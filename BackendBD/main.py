@@ -12,6 +12,8 @@ from datetime import date
 from api.routes import router as http_router
 from model.query_prediction import *
 
+from fastapi.middleware.cors import CORSMiddleware
+
 # Inicializar aplicación FastAPI
 app = FastAPI(
     title="Agente de predicción de stock",
@@ -19,7 +21,19 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Registrar rutas HTTP
+origins = [
+    "*",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 app.include_router(http_router, prefix="/api", tags=["predicciones"])
 
         
