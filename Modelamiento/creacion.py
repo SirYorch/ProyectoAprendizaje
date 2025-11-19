@@ -15,8 +15,8 @@ from datetime import datetime, timedelta
 np.random.seed(42)
 random.seed(42)
 
-dias_totales = 476  # días simulados
-fecha_inicio = datetime(2024, 7, 1)
+dias_totales = 14  # días simulados
+fecha_inicio = datetime(2025, 10, 20)
 
 # Productos y proveedores
 productos = [
@@ -220,6 +220,6 @@ df_total = pd.concat(
 # --------------------------------------
 # GUARDAR RESULTADO
 # --------------------------------------
-df_total.to_csv("inventario.csv", index=False)
+df_total.to_csv("data20oct-2nov.csv", index=False)
 print(f"✅ Dataset generado con {len(df_total):,} filas ({len(productos)} productos × {dias_totales} días)")
 print(df_total.head(10))

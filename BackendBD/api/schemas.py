@@ -202,11 +202,16 @@ class RetrainResponse(BaseModel):
     success: bool
     message: str
     filename: str
-    rows_processed: int
-    rows_inserted: int
+    # rows_processed: int
+    # rows_inserted: int
     model_retrained: bool
-    previous_accuracy: Optional[float] = Field(None, description="Precisión del modelo anterior")
-    new_accuracy: Optional[float] = Field(None, description="Precisión del modelo nuevo")
+    version: str
+    # previous_accuracy: Optional[float] = Field(None, description="Precisión del modelo anterior")
+    # new_accuracy: Optional[float] = Field(None, description="Precisión del modelo nuevo")
+    previous_rmse: Optional[float] = Field(None, description="RMSE del modelo anterior")
+    new_rmse: Optional[float] = Field(None, description="RMSE del modelo nuevo")
+    # previous_mae: Optional[float] = Field(None, description="MAE del modelo anterior")
+    # new_mae: Optional[float] = Field(None, description="MAE del modelo nuevo")
     training_time_seconds: float
     
     class Config:

@@ -10,6 +10,7 @@ from model.methods import predict_stock
 from agent.agent import naturalize_response
 from db.getters import get_products
 from model.query_prediction import *
+from model.retrain import retrain_from_csv
 import pandas as pd
 
 from .schemas import *
@@ -278,18 +279,63 @@ async def chat_with_agent(request: ChatRequest) -> Dict[str, Any]:
     description="Sube un archivo CSV con nuevos datos para reentrenar el modelo de predicción"
 )
 async def upload_and_retrain(
-    file: UploadFile = File(..., description="Archivo CSV con datos de entrenamiento")
+    file: UploadFile = File(..., description="Archivo CSV con datos de entrenamiento"),
+    epochs: int = Query(5, description="Número de épocas para reentrenamiento", ge=1, le=100),
+    batch_size: int = Query(128, description="Tamaño del batch", ge=16, le=512),
+    umbral_degradacion: float = Query(0.1, description="Porcentaje permitido de degradación (0.1 = 10%)", ge=0.0, le=1.0)
 ) -> Dict[str, Any]:
     """
     Recibe un archivo CSV, lo procesa y reentrena el modelo.
     
     Args:
         file: Archivo CSV con columnas: fecha, producto, stock, ventas, etc.
+        epochs: Número de épocas para reentrenamiento (default: 15)
+        batch_size: Tamaño del batch (default: 128)
+        umbral_degradacion: Porcentaje permitido de degradación (default: 0.1 = 10%)
         
     Returns:
         Dict con información del proceso de reentrenamiento
     """
-    # TODO: Implementar validación del CSV
-    # TODO: Implementar inserción en base de datos
-    # TODO: Implementar reentrenamiento del modelo
-    pass
+    # Validar que sea un archivo CSV
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(
+            status_code=400,
+            detail="El archivo debe ser un CSV (.csv)"
+        )
+    
+    try:
+        # Leer el contenido del archivo
+        contents = await file.read()
+        
+        # Validar que no esté vacío
+        if len(contents) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="El archivo CSV está vacío"
+            )
+        
+        # Llamar a la función de reentrenamiento
+        resultado = retrain_from_csv(
+            csv_content=contents,
+            filename=file.filename,
+            epochs=epochs,
+            batch_size=batch_size,
+            umbral_degradacion=umbral_degradacion
+        )
+        
+        # Si falló, devolver error
+        if not resultado.get("success", False):
+            raise HTTPException(
+                status_code=500,
+                detail=resultado.get("message", "Error en el reentrenamiento")
+            )
+        
+        return resultado
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error procesando el archivo: {str(e)}"
+        )

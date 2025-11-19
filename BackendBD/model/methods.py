@@ -4,15 +4,24 @@ from datetime import datetime, timedelta
 import tensorflow as tf
 import joblib
 import os
-
+from pathlib import Path
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
+# Obtener el directorio base (BackendBD)
+BASE_DIR = Path(__file__).resolve().parent.parent
+FILES_DIR = BASE_DIR / "files"
 
-df = pd.read_csv("files/dataset_preparado.csv", parse_dates=["created_at"])
+# Rutas a los archivos necesarios
+DATASET_PATH = FILES_DIR / "dataset_preparado.csv"
+MODEL_PATH = FILES_DIR / "modelo.h5"
+SCALER_PATH = FILES_DIR / "scaler.pkl"
+
+# Cargar datos y modelo
+df = pd.read_csv(DATASET_PATH, parse_dates=["created_at"])
 df = df.sort_values(["product_id", "created_at"])
-model = tf.keras.models.load_model("modelo.h5", compile=False)
-scaler = joblib.load("files/scaler.pkl")
+model = tf.keras.models.load_model(str(MODEL_PATH), compile=False)
+scaler = joblib.load(SCALER_PATH)
 
 
 # Variables usadas en el modelo 
