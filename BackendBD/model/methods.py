@@ -65,6 +65,48 @@ def build_sequence(product_id, target_date):
     return np.expand_dims(seq, axis=0)  , currentStock # (1, 7, n_features)
 
 
+def predict_demand(product_id: str, date: str) -> dict:
+    """
+    Predice las ventas diarias esperadas para un producto en una fecha dada.
+
+    Parámetros:
+        product_id (str): ID del producto (ej. 'PROD-005')
+        date (str o datetime): Fecha objetivo (formato 'YYYY-MM-DD')
+
+    Retorna:
+        dict: { "product_id": ..., "fecha_objetivo": ..., "prediccion_ventas": ... }
+    """
+    if isinstance(date, str):
+        date = datetime.strptime(date, "%Y-%m-%d")
+    
+    # Generar secuencia
+    X_input = build_sequence_for_product(product_id, date, df)
+    
+    # 🔧 eliminar esta línea que causaba el error
+    # fecha_final = datetime.strptime(date, "%Y-%m-%d")
+    fecha_final = date  # ya es datetime
+
+    # Asegurarse de que ultimaFecha también sea datetime (por si viene como Timestamp)
+    ultimaFecha = pd.to_datetime(ultimaFecha)
+
+    # Recorrer día por día
+    fecha_actual = ultimaFecha
+    total_ventas = 0
+    while fecha_actual <= fecha_final:
+        # Predecir
+        pred = model.predict(X_input)
+        total_ventas += pred[0][0]
+        fecha_actual += timedelta(days=1)
+    
+    pred_val = float(pred[0][0])  # conversión a float simple
+    
+    return {
+        "product_id": product_id,
+        "fecha_objetivo": date.strftime("%Y-%m-%d"),
+        "prediccion_ventas": round(pred_val, 2),
+        "Resultado_total_a_reabastecer": round(total_ventas, 2)
+    }
+
 def predict_stock(product_id: str, date: str):
     
     date  = pd.to_datetime("2025-04-12")
