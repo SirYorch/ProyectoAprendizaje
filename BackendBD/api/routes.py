@@ -8,12 +8,13 @@ from datetime import date , timedelta
 from typing import Dict, Any
 from model.methods import predict_stock
 from agent.agent import naturalize_response
+from db.getters import get_products
+from model.query_prediction import *
+import pandas as pd
 
 from .schemas import *
 
 router = APIRouter()
-
-PRODUCTS = ["PROD-001"]
 
 
 @router.get(
@@ -22,33 +23,46 @@ PRODUCTS = ["PROD-001"]
     summary="Predecir productos fuera de stock",
     description="Predice qué productos se quedarán sin stock próximamente"
 )
-async def predict_out_of_stock() -> Dict[str, Any]:
+async def predict_out_of_stock() -> Dict[List, Any]:
     """
-    Predice los productos que se quedarán sin stock.
-    
+    Predice los productos hasta que uno se ŕediga sin stock
     Returns:
         Dict con la lista de productos y probabilidades de quedarse sin stock
     """
     
+    PRODUCTS = get_products()
     
 
-    today = date.today()
+    day = date.today()
     results = []
 
-    for product in PRODUCTS:
-        pred = predict_stock(
-            product_id=product,
-            date="2024-07-02")
+    for i in range (30):
+        zero = False
+        for product in PRODUCTS:
+            pred = predict_stock(
+                product_id=product,
+                date=day)
+            day = day+ timedelta(days=1)
+            
+            results.append({
+                    "product_name": product,
+                    "predicted_stock": int(pred["predicted_stock"]),
+                    "current_stock": pred["current_stock"],
+                })
+            if(int(pred["predicted_stock"]) <= 0):
+                zero = True
+                break
+        if zero == True:
+            break
         
-
-        
-        results.append({
-                "product_name": product,
-                "predicted_stock": pred["prediccion_stock"]
-                
-            })
-
-    return {"out_of_stock_products": results}
+    
+    
+    return {
+        "success": True,
+        "message": "Predicción completada exitosamente",
+        "total_products": 3,
+        "risk_date": pd.to_datetime("2025-04-12"),
+        "products_at_risk": results}
 
 
 @router.post(
@@ -67,16 +81,27 @@ async def predict_product_stock(request: PredictProductStockRequest) -> Dict[str
     Returns:
         Dict con predicción de stock para el producto y fecha especificados
     """
+    
+    producto = request.product_name
+    
+    fecha = request.predict_date
+    
+    print("Hola mundo")
     pred = predict_stock(
-        product_id=request.product_name,
-        date=request.prediction_date.strftime("%Y-%m-%d")
-    )
-
+        product_id=producto,
+        date=fecha )
+    
+        
+        
+        
     return {
-        "product_name": request.product_name,
-        "prediction_date": request.prediction_date,
-        "predicted_stock": pred["prediccion_stock"]
-    }
+                "success": True,
+                "message": "Predicción completada",
+                "product_name": producto,
+                "prediction_date": fecha,
+                "predicted_stock": int(pred["predicted_stock"]),
+                "current_stock": pred["current_stock"],
+            }
 
 
 @router.post(
@@ -95,6 +120,7 @@ async def predict_date(request: PredictDateRequest) -> Dict[str, Any]:
     Returns:
         Dict con predicciones de todos los productos para la fecha especificada
     """
+    PRODUCTS = get_products()
     
     results = []
 
@@ -106,14 +132,21 @@ async def predict_date(request: PredictDateRequest) -> Dict[str, Any]:
 
         results.append({
             "product_name": product,
-            "prediction_date": request.prediction_date,
-            "predicted_stock": pred["prediccion_stock"]
+            "predicted_stock": int(pred["predicted_stock"])
         })
 
     return {
-        "prediction_date": request.prediction_date,
-        "inventory_predictions": results
-    }
+                "success": True,
+                "message": "Predicción completada",
+                "prediction_date": str(request.prediction_date),
+                "total_products": len(results),
+                "predictions": results
+            }
+
+
+
+
+
 
 
 @router.post(
@@ -135,27 +168,43 @@ async def predict_product_out_of_stock(
         Dict con la fecha estimada de agotamiento del producto
     """
     product = request.product_name
-    today = date.today()
+    day = date.today()
 
+    predictions = []
     # Buscar hasta 365 días hacia adelante
-    for offset in range(0, 365):
-        check_date = today + timedelta(days=offset)
+    for i in range (30):
+        day = day+timedelta(days=1)
+        print(day)
         pred = predict_stock(
             product_id=product,
-            date=check_date.strftime("%Y-%m-%d")
+            date=day
         )
 
-        if pred["prediccion_stock"] <= 0:
-            return {
-                "product_name": product,
-                "out_of_stock_date": check_date
-            }
+        predictions.append(
+            {
+                      
+                        "product_name": product,
+                        "predicted_stock": int(pred["predicted_stock"]),
+                        
+                    }
+        )
+        if pred["predicted_stock"] <= 0:
+            break
 
     # Si nunca se agota en 1 año
-    return {
-        "product_name": product,
-        "out_of_stock_date": None
-    }
+    return  {
+                "success": True,
+                "message": "Predicción completada",
+                "product_name": product,
+                "predicted_out_date": str(day),
+                "predictions": predictions
+            }
+    
+    
+    
+    
+    
+        
 
 @router.post(
     "/chat",
@@ -173,12 +222,53 @@ async def chat_with_agent(request: ChatRequest) -> Dict[str, Any]:
     Returns:
         Dict con la respuesta del agente LLM
     """
-    req = naturalize_response({"Producto1":"10/10/2025"},{"Producto2":"10/20/2025"})
+    
+    
+    classifier = IntentClassifier()
+    
+    # Cargar o entrenar modelo
+    model_path = "intent_classifier.pkl"
+    classifier.load_model(model_path)
+    
+    endpoint, confidence, label = classifier.predict_intent(request.message)
+    params = classifier.extract_parameters(request.message, endpoint)
+    
+    # print(f"  → Endpoint: {endpoint}")
+    # print(f"  → Confianza: {confidence:.2%}")
+    # print(f"  → Parámetros: {params}")
+    res = {}
+    
+    if(confidence > 80):    
+        if(endpoint == predict_out_of_stock):
+            res = predict_out_of_stock()
+        elif(endpoint == predict_product_stock):
+            res = predict_product_stock(params["product_name"],params["prediction_date"])
+        elif(endpoint == predict_date):
+            res = predict_date(params["prediction_date"])
+        elif(endpoint == predict_product_out_of_stock):
+            res = predict_product_out_of_stock(params["product_name"])
+    else:
+        res = f"no logré encontrar un resultado para la busqueda: {request.message}"    
+    
+    
+    # ans = predict_intent(request.message)
+    req = naturalize_response(res)
     
     return {
         "success": True,
         "message": req
     }
+
+
+
+
+
+
+
+
+
+
+
 
 
 @router.post(

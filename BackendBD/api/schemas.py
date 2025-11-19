@@ -6,20 +6,23 @@ Define la estructura de datos de entrada y salida de la API.
 from pydantic import BaseModel, Field
 from datetime import date
 from typing import List, Optional, Dict, Any
+import pandas as pd
+
+
 
 
 # ============ REQUEST SCHEMAS ============
 
 class PredictProductStockRequest(BaseModel):
-    """Request para predecir stock de un producto específico."""
-    product_name: str = Field(..., description="Nombre del producto", min_length=1)
-    prediction_date: date = Field(..., description="Fecha para la predicción")
+    """Request para predecir stock de un producto específico, en una fecha específica."""
+    product_name: str
+    predict_date: str
     
     class Config:
-        json_schema_extra = {
+        json_schema_extra ={
             "example": {
                 "product_name": "Laptop HP",
-                "prediction_date": "2025-12-31"
+                "predict_date": "2025-04-01",
             }
         }
 
@@ -64,12 +67,9 @@ class ChatRequest(BaseModel):
 
 class ProductOutOfStockInfo(BaseModel):
     """Información de un producto que se quedará sin stock."""
-    product_id: int
     product_name: str
+    predicted_stock:int 
     current_stock: int
-    predicted_out_date: date
-    days_until_out: int
-    confidence: float = Field(..., ge=0, le=1, description="Confianza de la predicción (0-1)")
 
 
 class OutOfStockResponse(BaseModel):
@@ -77,6 +77,7 @@ class OutOfStockResponse(BaseModel):
     success: bool
     message: str
     total_products: int
+    risk_date: date
     products_at_risk: List[ProductOutOfStockInfo]
     
     class Config:
@@ -85,14 +86,15 @@ class OutOfStockResponse(BaseModel):
                 "success": True,
                 "message": "Predicción completada exitosamente",
                 "total_products": 3,
+                "risk_date": pd.to_datetime("2025-04-12"),
                 "products_at_risk": [
                     {
-                        "product_id": 1,
+                 
                         "product_name": "Laptop HP",
                         "current_stock": 5,
                         "predicted_out_date": "2025-12-15",
                         "days_until_out": 28,
-                        "confidence": 0.85
+                 
                     }
                 ]
             }
@@ -107,8 +109,6 @@ class ProductStockResponse(BaseModel):
     prediction_date: date
     predicted_stock: int
     current_stock: int
-    stock_change: int
-    confidence: float
     
     class Config:
         json_schema_extra = {
@@ -119,26 +119,22 @@ class ProductStockResponse(BaseModel):
                 "prediction_date": "2025-12-31",
                 "predicted_stock": 8,
                 "current_stock": 12,
-                "stock_change": -4,
-                "confidence": 0.92
             }
         }
 
 
+
 class ProductPrediction(BaseModel):
     """Predicción individual de un producto."""
-    product_id: int
     product_name: str
     predicted_stock: int
-    current_stock: int
-    confidence: float
 
 
 class DatePredictionResponse(BaseModel):
     """Response con predicción de inventario para una fecha."""
     success: bool
     message: str
-    prediction_date: date
+    prediction_date: str
     total_products: int
     predictions: List[ProductPrediction]
     
@@ -151,39 +147,39 @@ class DatePredictionResponse(BaseModel):
                 "total_products": 2,
                 "predictions": [
                     {
-                        "product_id": 1,
+                      
                         "product_name": "Laptop HP",
                         "predicted_stock": 8,
-                        "current_stock": 12,
-                        "confidence": 0.92
+                        
                     }
                 ]
             }
         }
-
+        
 
 class ProductOutOfStockResponse(BaseModel):
     """Response con predicción de cuándo se agotará un producto."""
     success: bool
     message: str
     product_name: str
-    current_stock: int
-    predicted_out_date: Optional[date]
-    days_until_out: Optional[int]
-    confidence: float
-    will_run_out: bool
-    
+    predicted_out_date: str
+    predictions: List[ProductPrediction]
+
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
                 "message": "Predicción completada",
                 "product_name": "Laptop HP",
-                "current_stock": 12,
                 "predicted_out_date": "2025-12-15",
-                "days_until_out": 28,
-                "confidence": 0.85,
-                "will_run_out": True
+                "predictions": [
+                    {
+                      
+                        "product_name": "Laptop HP",
+                        "predicted_stock": 8,
+                        
+                    }
+                ]
             }
         }
         

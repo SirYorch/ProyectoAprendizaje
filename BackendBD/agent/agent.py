@@ -12,8 +12,8 @@ def naturalize_response(prediction_data: dict, language: str = "es") -> dict:
     """
     
     mensaje = (
-        f"Presenta este texto simulando ser un agente de predicción de stock: "
-        f"{prediction_data}"
+        f"Eres un agente de predicción de stock, debes presentar este texto al cliente, de forma que sea comprensible y adaptado, puedes usar tablas signos como negrita y cursita para presentar el texto, escribelo en formato markdown "
+        f"La data es: {prediction_data}"
     )
 
     resp = llm.invoke([HumanMessage(content=mensaje)])

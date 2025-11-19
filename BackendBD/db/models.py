@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Column, String, Integer, Numeric, Boolean,
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+
 import pandas as pd
 
 # Base para los modelos
@@ -85,12 +86,11 @@ def listar_productos():
     session = SessionLocal()
     try:
         productos = session.query(Producto).all()
+        products_ids = []
         print(f"\n=== Total de productos: {len(productos)} ===")
-        for producto in productos[:5]:
-            print(f"  • {producto.product_name} ({producto.product_sku})")
-        if len(productos) > 5:
-            print(f"  ... y {len(productos) - 5} más")
-        return productos
+        for producto in productos:
+            products_ids.append(producto.product_id)
+        return products_ids
     finally:
         session.close()
 

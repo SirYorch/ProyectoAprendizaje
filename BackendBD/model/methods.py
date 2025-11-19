@@ -37,8 +37,12 @@ def build_sequence(product_id, target_date):
     df_p = df[df["product_id"] == product_id].copy()
     df_p = df_p.sort_values("created_at")
     
+
+    
     # Tomamos los últimos N_STEPS días previos
     df_hist = df_p[df_p["created_at"] < target_date].tail(N_STEPS)
+    
+    currentStock = df_hist["quantity_on_hand"].iloc[0]
 
     if len(df_hist) < N_STEPS:
         raise ValueError(f"No hay suficientes datos para {product_id}. Se requieren {N_STEPS} días.")
@@ -49,17 +53,17 @@ def build_sequence(product_id, target_date):
 
     seq = scaled[:, :len(FEATURES)]
 
-    return np.expand_dims(seq, axis=0)   # (1, 7, n_features)
+    return np.expand_dims(seq, axis=0)  , currentStock # (1, 7, n_features)
 
 
 def predict_stock(product_id: str, date: str):
-    if isinstance(date, str):
-        date = datetime.strptime(date, "%Y-%m-%d")
     
-    print(str(date)+" "+product_id)
-    X = build_sequence(product_id, date)
+    date  = pd.to_datetime("2025-04-12")
     
-    pred_scaled = model.predict(X)[0][0]
+    
+    X , currentStock= build_sequence(product_id, date)
+    res = model.predict(X)
+    pred_scaled = res[0][0]
     
     # Desescalar (invertir StandardScaler)
     target_idx = scaler.feature_names_in_.tolist().index(TARGET)
@@ -67,9 +71,15 @@ def predict_stock(product_id: str, date: str):
     std = np.sqrt(scaler.var_[target_idx])
     
     pred_real = pred_scaled * std + mean
-
+    
+    #  "product_name": product,
+    #             "predicted_stock": pred["prediccion_stock"],
+    #             "current_stock": pred["current-stock"],
+                
+    
     return {
-        "product_id": product_id,
-        "fecha_objetivo": date.strftime("%Y-%m-%d"),
-        "prediccion_stock": round(float(pred_real), 2)
+        "product_name": product_id,
+        "predicted_stock": round(float(pred_real), 2),
+        "current_stock": currentStock
     }
+
