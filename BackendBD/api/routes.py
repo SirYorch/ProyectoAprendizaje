@@ -12,6 +12,7 @@ from db.getters import get_products
 from model.query_prediction import *
 from model.retrain import retrain_from_csv
 import pandas as pd
+import json
 
 from .schemas import *
 
@@ -52,7 +53,7 @@ async def predict_out_of_stock() -> Dict[List, Any]:
                 })
             if(int(pred["predicted_stock"]) <= 0):
                 zero = True
-                break
+            
         if zero == True:
             break
         
@@ -232,29 +233,41 @@ async def chat_with_agent(request: ChatRequest) -> Dict[str, Any]:
     classifier.load_model(model_path)
     
     endpoint, confidence, label = classifier.predict_intent(request.message)
-    params = classifier.extract_parameters(request.message, endpoint)
     
-    # print(f"  → Endpoint: {endpoint}")
-    # print(f"  → Confianza: {confidence:.2%}")
-    # print(f"  → Parámetros: {params}")
+    
+    print(f"  → Endpoint: {endpoint}")
+    print(f"  → Confianza: {confidence:.2%}")
+    
     res = {}
+    print(endpoint)
+    print((endpoint == "predict_out_of_stock"))
     
-    if(confidence > 80):    
-        if(endpoint == predict_out_of_stock):
-            res = predict_out_of_stock()
-        elif(endpoint == predict_product_stock):
-            res = predict_product_stock(params["product_name"],params["prediction_date"])
-        elif(endpoint == predict_date):
-            res = predict_date(params["prediction_date"])
-        elif(endpoint == predict_product_out_of_stock):
-            res = predict_product_out_of_stock(params["product_name"])
+    if(int(confidence*100) > 80):    
+        if(endpoint == "predict_out_of_stock"):
+            res = await predict_out_of_stock()
+        elif(endpoint == "predict_product_stock"):
+            params = classifier.extract_parameters(request.message, endpoint)
+            print(f"  → Parámetros: {params}")
+            res =  await predict_product_stock(params["product_name"],params["prediction_date"])
+            
+        elif(endpoint == "predict_date"):
+            params = classifier.extract_parameters(request.message, endpoint)
+            print(f"  → Parámetros: {params}")
+            res =  await predict_date(params["prediction_date"])
+        elif(endpoint == "predict_product_out_of_stock"):
+            params = classifier.extract_parameters(request.message, endpoint)
+            print(f"  → Parámetros: {params}")
+            res = await predict_product_out_of_stock(params["product_name"])
     else:
         res = f"no logré encontrar un resultado para la busqueda: {request.message}"    
     
     
-    # ans = predict_intent(request.message)
-    req = naturalize_response(res)
     
+
+    print(json.dumps(res, indent=4, ensure_ascii=False, default=str))
+    
+    req = naturalize_response(res)
+    # req = ""
     return {
         "success": True,
         "message": req

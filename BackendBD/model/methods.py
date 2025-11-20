@@ -311,6 +311,10 @@ def predict_stock(
         
         # Guardar en caché
         if use_cache:
+            features_dict = {k: clean_numpy(v) for k, v in features_dict.items()}
+            current_stock = clean_numpy(current_stock)
+            pred_demanda = clean_numpy(pred_demanda)
+
             save_prediction_to_cache(
                 product_id,
                 fecha_actual,
@@ -389,3 +393,14 @@ def predict_stock_range(
         "final_stock": result["predicted_stock"],
         "current_stock": result["current_stock"]
     }
+def clean_numpy(value):
+    """Convierte numpy types a tipos nativos de Python."""
+    import numpy as np
+
+    if isinstance(value, (np.floating, np.float32, np.float64)):
+        return float(value)
+    if isinstance(value, (np.integer, np.int32, np.int64)):
+        return int(value)
+    if isinstance(value, np.bool_):
+        return bool(value)
+    return value
