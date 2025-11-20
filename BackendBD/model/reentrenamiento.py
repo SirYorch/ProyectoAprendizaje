@@ -227,11 +227,12 @@ def reentrenar_modelo(
     logger.info(f"INICIO DE REENTRENAMIENTO - Versión {version}")
     logger.info(f"{'='*60}\n")
     
+    df_nuevo_prep = preparar_csv_crudo(df_nuevo)
+        # logger.info(f" {len(df_nuevo_prep)} filas preparadas")
+    
     try:
         # 1. PREPARAR DATOS NUEVOS
         # logger.info("Paso 1: Preparando datos nuevos...")
-        df_nuevo_prep = preparar_csv_crudo(df_nuevo)
-        # logger.info(f" {len(df_nuevo_prep)} filas preparadas")
         
         # 2. CARGAR Y COMBINAR CON DATASET EXISTENTE
         # logger.info("\nPaso 2: Cargando dataset existente...")
@@ -436,6 +437,16 @@ def reentrenar_modelo(
           #  logger.info(f"\n{'='*60}")
             logger.info("REENTRENAMIENTO COMPLETADO")
             logger.info(f"{'='*60}\n")
+            
+            
+            df_nuevo_prep1 = df_nuevo_prep
+            df_nuevo_prep1["created_at"] = df_nuevo_prep1["created_at"].dt.strftime("%Y-%m-%d")
+            
+            df_antiguo = pd.read_csv("files/dataset_preparado.csv")
+            
+            df_antiguo["created_at"] = df_antiguo["created_at"]
+            df_total = pd.concat([df_antiguo, df_nuevo_prep])
+            df_total.to_csv("files/dataset_preparado.csv")
             
             return resultado
     
