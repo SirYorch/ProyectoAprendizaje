@@ -1,5 +1,6 @@
 __pycache__
 proyecto/
+model_versions/
 Backend/requirements.txt
 Modelamiento/mlruns/
 BackendBD/model/model_versions/
