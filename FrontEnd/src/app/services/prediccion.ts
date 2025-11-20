@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-const API_URL = 'https://q9phmkbl-8000.use2.devtunnels.ms';
+const API_URL = 'http://localhost:8000';
 
 export interface ChatRequest {
   message: string;
