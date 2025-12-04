@@ -1,6 +1,6 @@
 # ======================================================
 # 💼 DATASET SECUENCIAL REALISTA DE INVENTARIO RETAIL 
-# (ajustado: menor stock y rotación en alta gama, sin floats indeseados)
+# (Con ventas_diarias incluido)
 # ======================================================
 
 import pandas as pd
@@ -16,7 +16,9 @@ np.random.seed(42)
 random.seed(42)
 
 dias_totales = 14  # días simulados
-fecha_inicio = datetime(2025, 10, 20)
+fecha_inicio = datetime(2025, 11, 3)
+# dias_totales = 476  # días simulados
+# fecha_inicio = datetime(2024, 7, 1)
 
 # Productos y proveedores
 productos = [
@@ -90,7 +92,9 @@ def generar_secuencia_realista(prod, idx):
         max_venta = random.randint(4, 10)
         prob_venta = random.uniform(0.6, 0.9)
         prod["category"] = 0
+    
     stock = [stock_inicial]
+    ventas_diarias = [0]  # 🔥 NUEVO: tracking de ventas diarias
     notas, batch_numbers, last_order_dates, last_stock_counts, last_updates = [], [], [], [], []
     ultima_reposicion = fechas[0] - timedelta(days=random.randint(10, 60))
 
@@ -125,6 +129,7 @@ def generar_secuencia_realista(prod, idx):
 
         nuevo_stock = max(0, stock[-1] - salida + reposicion)
         stock.append(int(round(nuevo_stock)))
+        ventas_diarias.append(salida)  # 🔥 NUEVO: guardar ventas del día
         notas.append(nota)
 
         batch = (
@@ -178,6 +183,7 @@ def generar_secuencia_realista(prod, idx):
         "quantity_on_hand": stock,
         "quantity_reserved": quantity_reserved,
         "quantity_available": quantity_available,
+        "ventas_diarias": ventas_diarias,  
         "minimum_stock_level": minimum_stock_level,
         "reorder_point": reorder_point,
         "optimal_stock_level": optimal_stock_level,
@@ -198,6 +204,7 @@ def generar_secuencia_realista(prod, idx):
     # 🔧 LIMPIEZA FINAL: eliminar floats indeseados
     cols_enteras = [
         "quantity_on_hand", "quantity_reserved", "quantity_available",
+        "ventas_diarias",
         "minimum_stock_level", "reorder_point", "optimal_stock_level",
         "reorder_quantity", "stock_status"
     ]
@@ -218,8 +225,17 @@ df_total = pd.concat(
 )
 
 # --------------------------------------
+# FORMATO DE FECHAS PARA POSTGRESQL
+# --------------------------------------
+df_total["created_at"] = df_total["created_at"].dt.strftime("%m/%d/%Y %H:%M")
+df_total["last_order_date"] = pd.to_datetime(df_total["last_order_date"]).dt.strftime("%m/%d/%Y")
+df_total["last_stock_count_date"] = pd.to_datetime(df_total["last_stock_count_date"]).dt.strftime("%m/%d/%Y")
+df_total["last_updated_at"] = pd.to_datetime(df_total["last_updated_at"]).dt.strftime("%m/%d/%Y %H:%M")
+
+# --------------------------------------
 # GUARDAR RESULTADO
 # --------------------------------------
-df_total.to_csv("data20oct-2nov.csv", index=False)
-print(f"✅ Dataset generado con {len(df_total):,} filas ({len(productos)} productos × {dias_totales} días)")
-print(df_total.head(10))
+output_file = "data3nov-16nov.csv"
+df_total.to_csv(output_file, index=False)
+print(f"Dataset generado: {output_file}")
+print(f"Total de filas: {len(df_total):,} ({len(productos)} productos × {dias_totales} días)")

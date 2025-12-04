@@ -11,6 +11,10 @@ import io
 
 # Importar función de reentrenamiento desde el mismo módulo
 from .reentrenamiento import reentrenar_modelo
+# Para recargar el modelo en caliente
+from . import methods as model_methods
+from db.predictions_saved import clear_all_cache
+from db.Tables import cargarnuevosRegistros
 
 
 def retrain_from_csv(
@@ -36,12 +40,20 @@ def retrain_from_csv(
     start_time = time.time()
     
     try:
+        import tempfile
         # 1. Convertir bytes a DataFrame
         df_nuevo = pd.read_csv(io.BytesIO(csv_content))
         rows_processed = len(df_nuevo)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+            tmp.write(csv_content)
+            tmp_path = tmp.name
+
+        # 2. Cargar nuevos registros a BD
+        cargarnuevosRegistros(tmp_path)
+
         
-        # 2. Llamar directamente a la función de reentrenamiento
-        # (ya está configurada para trabajar desde BackendBD)
+        # 3. Llamar directamente a la función de reentrenamiento
         resultados = reentrenar_modelo(
             df_nuevo=df_nuevo,
             epochs=epochs,
@@ -51,20 +63,35 @@ def retrain_from_csv(
             patience=5
         )
         
-        # 3. Calcular tiempo de entrenamiento
+        # 4. Calcular tiempo de entrenamiento
         training_time = time.time() - start_time
-        
-        # 4. Formatear respuesta para el schema
+
+        # 5. Recarga en caliente: modelo + dataset + limpiar caché
+        reload_ok = False
+        try:
+            # Siempre recargamos el dataset, porque el CSV se actualiza incluso si el modelo se rechazó
+            model_methods.reload_dataset()
+            # Si el modelo fue aceptado, recargamos también el modelo en memoria
+            if resultados.get("exito", False):
+                model_methods.reload_model()
+            # Limpiamos todo el caché de predicciones (si existe la tabla)
+            try:
+                clear_all_cache()
+            except Exception as e:
+                print(" No se pudo limpiar el caché (probablemente no existe la tabla):", e)
+            reload_ok = True
+        except Exception as e:
+            print("  Reentrenamiento OK pero fallo al recargar modelo/dataset o limpiar caché:", e)
+
+        # 6. Formatear respuesta para el schema
         return {
             "success": resultados.get("exito", False),
             "message": resultados.get("mensaje", "Reentrenamiento completado"),
             "filename": filename,
             "rows_processed": rows_processed,
             "model_retrained": resultados.get("exito", False),
-            # "previous_accuracy": resultados.get("old_rmse"),  # Usando RMSE como métrica
-            # "new_accuracy": resultados.get("new_rmse"),  # Usando RMSE como métrica
+            "model_reloaded": reload_ok,
             "training_time_seconds": round(training_time, 2),
-            # Datos adicionales
             "version": resultados.get("version"),
             "previous_rmse": resultados.get("previous_rmse"),
             "new_rmse": resultados.get("new_rmse"),

@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Column, String, Integer, Numeric, Boolean,
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy.dialects.postgresql import LARGE_BINARY as LargeBinary
+from sqlalchemy import LargeBinary
 from datetime import datetime
 
 import pandas as pd
@@ -70,7 +70,7 @@ class Document(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     text = Column(Text, nullable=False)
-    metadata = Column(JSON)
+    meta = Column(JSON)
 
     # Relación con embeddings
     embeddings = relationship("Embedding", back_populates="document", cascade="all, delete-orphan")

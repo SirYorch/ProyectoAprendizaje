@@ -337,18 +337,12 @@ async def upload_and_retrain(
         )
         
         # Si falló, devolver error
-        if not resultado.get("success", False):
-            raise HTTPException(
-                status_code=500,
-                detail=resultado.get("message", "Error en el reentrenamiento")
-            )
+        if not isinstance(resultado, dict) or not resultado.get("success"):
+            raise HTTPException(500, resultado.get("message", "Error en el reentrenamiento"))
         
         return resultado
         
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error procesando el archivo: {str(e)}"
-        )
+        raise HTTPException(500, f"Error procesando el archivo: {str(e)}")

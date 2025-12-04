@@ -6,6 +6,7 @@ import joblib
 import os
 from pathlib import Path
 from db.predictions_saved import *
+import threading
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -18,11 +19,37 @@ DATASET_PATH = FILES_DIR / "dataset_preparado.csv"
 MODEL_PATH = FILES_DIR / "modelo.h5"
 SCALER_PATH = FILES_DIR / "scaler.pkl"
 
-# Cargar datos y modelo
+# Cargar datos y modelo al inicio
 df = pd.read_csv(DATASET_PATH, parse_dates=["created_at"])
 df = df.sort_values(["product_id", "created_at"])
-model = tf.keras.models.load_model("files/modelo.h5", compile=False)
-scaler = joblib.load("files/scaler.pkl")
+# Cargar modelo y scaler con rutas centralizadas
+def _load_model_and_scaler(model_path=MODEL_PATH, scaler_path=SCALER_PATH):
+    m = tf.keras.models.load_model(str(model_path), compile=False)
+    s = joblib.load(str(scaler_path))
+    return m, s
+
+# Variables globales y lock para recarga segura
+_model_lock = threading.Lock()
+model, scaler = _load_model_and_scaler()
+
+
+def reload_model(model_path: Path = MODEL_PATH, scaler_path: Path = SCALER_PATH) -> bool:
+    """Recarga el modelo y el scaler en memoria desde los ficheros dados.
+
+    Retorna True si la recarga fue exitosa, lanza excepción en caso contrario.
+    """
+    global model, scaler
+    try:
+        with _model_lock:
+            print(f"→ Recargando modelo desde {model_path} y scaler desde {scaler_path}")
+            m, s = _load_model_and_scaler(model_path, scaler_path)
+            model = m
+            scaler = s
+        print("✓ Modelo recargado en memoria")
+        return True
+    except Exception as e:
+        print("✗ Error recargando modelo:", e)
+        raise
 
 
 # Variables usadas en el modelo 
@@ -185,38 +212,15 @@ def create_features_dict(
 def predict_stock(
     product_id: str, 
     date: str, 
-    use_cache: bool = True
+    use_cache: bool = False   
 ) -> Dict[str, Any]:
     """
-    Predice el stock de un producto de forma recursiva con caché inteligente.
-    
-    Proceso:
-    1. Verifica si la fecha está en datos reales → retorna datos reales
-    2. Verifica si está completamente en caché → retorna del caché
-    3. Predice recursivamente día por día:
-       - Reutiliza días ya cacheados
-       - Calcula y cachea días faltantes
-       - Actualiza stock acumulativamente
-    
-    Args:
-        product_id: ID del producto (ej. 'PROD-005')
-        date: Fecha objetivo (str 'YYYY-MM-DD' o datetime)
-        use_cache: Si True, usa y guarda predicciones en caché
-    
-    Returns:
-        Diccionario con:
-        - product_name: ID del producto
-        - predicted_stock: Stock predicho para la fecha objetivo
-        - current_stock: Stock actual (último dato real)
-        - dias_predichos: Días entre última fecha real y objetivo
-        - predicciones_generadas: Días calculados (no estaban en caché)
-        - predicciones_desde_cache: Días obtenidos del caché
-        - fecha_inicial: Última fecha con datos reales
-        - fecha_objetivo: Fecha solicitada
-        - tipo: Tipo de resultado ('datos_reales', 'cache', 'prediccion_recursiva')
-    
-    Raises:
-        ValueError: Si no hay suficientes datos históricos
+    Predice el stock de un producto de forma recursiva, día a día,
+    usando siempre ventanas de longitud N_STEPS.
+
+    - Si la fecha objetivo está dentro de los datos reales -> devuelve dato real.
+    - Si es futura -> parte de los últimos N_STEPS días reales y
+      va generando días sintéticos usando el modelo, actualizando la ventana.
     """
     # Convertir fecha objetivo a datetime
     if isinstance(date, str):
@@ -226,7 +230,6 @@ def predict_stock(
     
     # Obtener datos históricos del producto
     df_p = df[df["product_id"] == product_id].copy()
-    
     if len(df_p) == 0:
         return {
             "error": f"No se encontraron datos para el producto {product_id}",
@@ -237,103 +240,84 @@ def predict_stock(
     
     # Última fecha con datos reales
     ultima_fecha_real = df_p["created_at"].max()
-    current_stock_real = df_p["quantity_on_hand"].iloc[-1]
+    current_stock_real = float(df_p["quantity_on_hand"].iloc[-1])
     
-    # CASO 1: La fecha objetivo ya pasó - retornar datos reales
+    # CASO 1: La fecha objetivo está en los datos reales -> dato real
     if target_date <= ultima_fecha_real:
         actual_data = df_p[df_p["created_at"] == target_date]
         if len(actual_data) > 0:
             return {
                 "product_name": product_id,
                 "predicted_stock": round(float(actual_data["quantity_on_hand"].iloc[0]), 2),
-                "current_stock": round(float(current_stock_real), 2),
+                "current_stock": round(current_stock_real, 2),
                 "dias_predichos": 0,
+                "fecha_inicial": ultima_fecha_real.strftime("%Y-%m-%d"),
                 "fecha_objetivo": target_date.strftime("%Y-%m-%d"),
                 "tipo": "datos_reales"
             }
     
-    # CASO 2: Verificar si tenemos la predicción completa en caché
-    if use_cache:
-        cached = get_single_cached_prediction(product_id, target_date)
-        if cached is not None:
-            return {
-                "product_name": product_id,
-                "predicted_stock": round(float(cached['predicted_stock']), 2),
-                "current_stock": round(float(current_stock_real), 2),
-                "dias_predichos": (target_date - ultima_fecha_real).days,
-                "predicciones_generadas": 0,
-                "predicciones_desde_cache": (target_date - ultima_fecha_real).days,
-                "fecha_inicial": ultima_fecha_real.strftime("%Y-%m-%d"),
-                "fecha_objetivo": target_date.strftime("%Y-%m-%d"),
-                "tipo": "cache"
-            }
+    # CASO 2: Predicción futura recursiva 
+    # Tomamos los últimos N_STEPS días reales como ventana inicial
+    df_hist = df_p[df_p["created_at"] <= ultima_fecha_real].tail(N_STEPS).copy()
+    if len(df_hist) < N_STEPS:
+        return {
+            "error": f"No hay suficientes datos para {product_id}. "
+                     f"Se requieren {N_STEPS} días, solo hay {len(df_hist)}.",
+            "product_name": product_id
+        }
     
-    # CASO 3: PREDICCIÓN RECURSIVA con caché incremental
+    # Vamos a ir generando días sintéticos desde el día siguiente al último real
     fecha_actual = ultima_fecha_real + timedelta(days=1)
-    current_stock = current_stock_real
     dias_predichos = 0
-    predicciones_generadas = 0
+    predicted_stock = current_stock_real  # valor que iremos actualizando
+    
+    # Para copiar features estáticos del último registro real
+    ultimo_real = df_hist.iloc[-1]
     
     while fecha_actual <= target_date:
-        # Intentar obtener del caché primero
-        if use_cache:
-            cached_day = get_single_cached_prediction(product_id, fecha_actual)
-            if cached_day is not None:
-                current_stock = cached_day['predicted_stock']
-                fecha_actual += timedelta(days=1)
-                dias_predichos += 1
-                continue
+        # Construir ventana escalada a partir de df_hist (últimos N_STEPS registros, reales + sintéticos)
+        cols_scaler = FEATURES + [TARGET]
+        window_scaled = scaler.transform(df_hist[cols_scaler])
+        X_input = np.expand_dims(window_scaled[:, :len(FEATURES)], axis=0)  # (1, N_STEPS, n_features)
         
-        # No está en caché, necesitamos predecir
-        try:
-            df_window = get_last_known_data(product_id, fecha_actual)
-        except ValueError as e:
-            return {
-                "error": str(e),
-                "product_name": product_id
-            }
-        
-        # Preparar secuencia y predecir
-        X_input = prepare_sequence(df_window)
+        # Predecir quantity_available del nuevo día (en espacio original)
         pred_scaled = model.predict(X_input, verbose=0)[0][0]
-        pred_demanda = inverse_scale_prediction(pred_scaled)
+        predicted_quantity = inverse_scale_prediction(pred_scaled)
         
-        # Actualizar stock: stock actual - demanda predicha
-        current_stock = max(0, current_stock - pred_demanda)
+        # Crear un nuevo registro sintético para fecha_actual
+        new_row = {
+            "product_id": product_id,
+            "created_at": fecha_actual,
+            "quantity_available": float(predicted_quantity),
+            # Para simplificar, tomamos quantity_on_hand como quantity_available predicho
+            "quantity_on_hand": float(predicted_quantity),
+            "quantity_reserved": float(ultimo_real["quantity_reserved"]),
+            "reorder_point": float(ultimo_real["reorder_point"]),
+            "optimal_stock_level": float(ultimo_real["optimal_stock_level"]),
+            "average_daily_usage": float(ultimo_real["average_daily_usage"]),
+            "stock_status": int(ultimo_real["stock_status"]),
+            "anio": fecha_actual.year,
+            "mes": fecha_actual.month,
+            "dia_semana": fecha_actual.dayofweek,
+            "fin_de_semana": 1 if fecha_actual.dayofweek >= 5 else 0,
+            "category": int(ultimo_real.get("category", 0)),
+        }
         
-        # Preparar features para guardar en caché
-        ultimo_registro = df_window.iloc[-1]
-        features_dict = create_features_dict(
-            current_stock, 
-            ultimo_registro, 
-            fecha_actual
-        )
+        # Añadir este nuevo día a la ventana y quedarnos con los últimos N_STEPS
+        df_hist = pd.concat([df_hist, pd.DataFrame([new_row])], ignore_index=True)
+        df_hist = df_hist.sort_values("created_at").tail(N_STEPS).copy()
         
-        # Guardar en caché
-        if use_cache:
-            features_dict = {k: clean_numpy(v) for k, v in features_dict.items()}
-            current_stock = clean_numpy(current_stock)
-            pred_demanda = clean_numpy(pred_demanda)
-
-            save_prediction_to_cache(
-                product_id,
-                fecha_actual,
-                current_stock,
-                pred_demanda,
-                features_dict
-            )
-            predicciones_generadas += 1
-        
-        fecha_actual += timedelta(days=1)
+        predicted_stock = float(predicted_quantity)
         dias_predichos += 1
+        fecha_actual += timedelta(days=1)
     
     return {
         "product_name": product_id,
-        "predicted_stock": round(float(current_stock), 2),
-        "current_stock": round(float(current_stock_real), 2),
+        "predicted_stock": round(predicted_stock, 2),
+        "current_stock": round(current_stock_real, 2),
         "dias_predichos": dias_predichos,
-        "predicciones_generadas": predicciones_generadas,
-        "predicciones_desde_cache": dias_predichos - predicciones_generadas,
+        "predicciones_generadas": dias_predichos,
+        "predicciones_desde_cache": 0,
         "fecha_inicial": ultima_fecha_real.strftime("%Y-%m-%d"),
         "fecha_objetivo": target_date.strftime("%Y-%m-%d"),
         "tipo": "prediccion_recursiva"
@@ -358,40 +342,47 @@ def predict_stock_range(
     Returns:
         Diccionario con predicciones diarias y estadísticas
     """
+    # Desactivar caché
+    use_cache = False
+
     start = pd.to_datetime(start_date)
     end = pd.to_datetime(end_date)
-    
-    # Primero predecir hasta la fecha final (esto cachea todos los días)
-    result = predict_stock(product_id, end_date, use_cache)
-    
-    if "error" in result:
-        return result
-    
-    # Obtener todas las predicciones del rango desde el caché
-    predictions = get_cached_predictions(product_id, start, end)
-    
-    if predictions is None or len(predictions) == 0:
+
+    # Calcular predicciones día a día 
+    daily_predictions = []
+    current = start
+    final_result = None
+
+    while current <= end:
+        res = predict_stock(
+            product_id=product_id,
+            date=current.strftime("%Y-%m-%d"),
+            use_cache=False
+        )
+        if "error" in res:
+            return res
+
+        daily_predictions.append({
+            "date": current.strftime("%Y-%m-%d"),
+            "predicted_stock": res["predicted_stock"],
+        })
+        final_result = res
+        current += timedelta(days=1)
+
+    if final_result is None:
         return {
-            "error": "No se pudieron obtener las predicciones del rango",
+            "error": "Rango de fechas vacío",
             "product_name": product_id
         }
-    
-    # Formatear para respuesta
-    daily_predictions = []
-    for _, row in predictions.iterrows():
-        daily_predictions.append({
-            "date": row['created_at'].strftime("%Y-%m-%d"),
-            "predicted_stock": round(float(row['quantity_available']), 2)
-        })
-    
+
     return {
         "product_name": product_id,
         "start_date": start_date,
         "end_date": end_date,
         "total_days": len(daily_predictions),
         "daily_predictions": daily_predictions,
-        "final_stock": result["predicted_stock"],
-        "current_stock": result["current_stock"]
+        "final_stock": final_result["predicted_stock"],
+        "current_stock": final_result["current_stock"],
     }
 def clean_numpy(value):
     """Convierte numpy types a tipos nativos de Python."""
@@ -404,3 +395,16 @@ def clean_numpy(value):
     if isinstance(value, np.bool_):
         return bool(value)
     return value
+
+def reload_dataset(dataset_path: Path = DATASET_PATH) -> bool:
+    """Recarga el dataset de inventario en memoria desde el CSV dado."""
+    global df
+    try:
+        new_df = pd.read_csv(dataset_path, parse_dates=["created_at"])
+        new_df = new_df.sort_values(["product_id", "created_at"])
+        df = new_df
+        print(f"✓ Dataset recargado en memoria desde {dataset_path}")
+        return True
+    except Exception as e:
+        print("✗ Error recargando dataset:", e)
+        raise
