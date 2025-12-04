@@ -1,4 +1,5 @@
 import pandas as pd
+import uuid
 import psycopg2
 from psycopg2 import sql
 from datetime import datetime
@@ -226,6 +227,79 @@ class InventoryDataLoader:
         
         return productos_insertados, registros_insertados
     
+    def agregar_registros_inventario(self, csv_file_path):
+        """
+        Método para SOLO agregar nuevos registros de inventario desde un CSV.
+        No modifica ni inserta productos.
+        
+        Args:
+            csv_file_path: Ruta al archivo CSV con los registros
+            
+        Returns:
+            int: Número de registros insertados exitosamente
+        """
+        print(f"\nAgregando registros de inventario desde: {csv_file_path}")
+        
+        # Leer el CSV
+        df = pd.read_csv(csv_file_path)
+        print(f"{len(df)} registros encontrados en el CSV")
+        
+        # Query de inserción
+        insert_registro_query = """
+        INSERT INTO registros_inventario (
+            id, product_id, created_at, quantity_on_hand, quantity_reserved,
+            quantity_available, ventas_diarias, total_value, last_order_date,
+            last_stock_count_date, batch_number, last_updated_at, notes, created_by_id
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (id) DO NOTHING;
+        """
+        
+        registros_insertados = 0
+        registros_duplicados = 0
+        registros_error = 0
+        
+        for _, row in df.iterrows():
+            try:
+                self.cursor.execute(insert_registro_query, (
+                    row['id'],
+                    row['product_id'],
+                    self.parse_datetime(row['created_at']),
+                    row['quantity_on_hand'],
+                    row['quantity_reserved'],
+                    row['quantity_available'],
+                    row['ventas_diarias'],
+                    row['total_value'],
+                    self.parse_date(row['last_order_date']),
+                    self.parse_date(row['last_stock_count_date']),
+                    row['batch_number'],
+                    self.parse_datetime(row['last_updated_at']),
+                    row['notes'] if pd.notna(row['notes']) else None,
+                    row['created_by_id'] if pd.notna(row['created_by_id']) else None
+                ))
+                
+                # Verificar si realmente se insertó (rowcount > 0)
+                if self.cursor.rowcount > 0:
+                    registros_insertados += 1
+                else:
+                    registros_duplicados += 1
+                    
+            except Exception as e:
+                registros_error += 1
+                print(f"✗ Error insertando registro {row['id']}: {e}")
+        
+        self.conn.commit()
+        
+        # Reporte de resultados
+        print("\n" + "=" * 60)
+        print("   RESUMEN DE CARGA DE REGISTROS")
+        print("=" * 60)
+        print(f"✓ Registros nuevos insertados: {registros_insertados}")
+        print(f"⊘ Registros duplicados (omitidos): {registros_duplicados}")
+        print(f"✗ Registros con error: {registros_error}")
+        print("=" * 60)
+        
+        return registros_insertados
+    
     def verify_data(self):
         """Verificar los datos cargados"""
         print("\n🔍 Verificación de datos:")
@@ -259,6 +333,56 @@ class InventoryDataLoader:
             self.conn.close()
         print("\n✓ Conexión cerrada")
 
+        
+def agregar_nuevos_registros(csv_file):
+    """
+    Función independiente para agregar SOLO registros de inventario.
+    Puede ser llamada desde cualquier otro script.
+    
+    Args:
+        csv_file: Ruta al archivo CSV con los nuevos registros
+        
+    Returns:
+        int: Número de registros insertados exitosamente
+    """
+    # Configuración de la base de datos
+    db_config = {
+        'host': 'localhost',
+        'database': 'aprendizaje',
+        'user': 'usuario1',
+        'password': 'password1',
+        'port': 5432
+    }
+    
+    loader = InventoryDataLoader(db_config)
+    
+    try:
+        print("\n" + "=" * 60)
+        print("   AGREGAR NUEVOS REGISTROS DE INVENTARIO")
+        print("=" * 60)
+        
+        # Conectar a la base de datos
+        loader.connect()
+        
+        # Agregar solo registros
+        registros = loader.agregar_registros_inventario(csv_file)
+        
+        print("\n✓ PROCESO COMPLETADO EXITOSAMENTE")
+        print("=" * 60 + "\n")
+        
+        return registros
+        
+    except Exception as e:
+        print(f"\n✗ Error en el proceso: {e}")
+        return 0
+    finally:
+        loader.close()
+
+
+def cargarnuevosRegistros(csv_file):
+    """Función para cargar nuevos registros desde un CSV dado (mantiene compatibilidad)"""
+    return agregar_nuevos_registros(csv_file)
+    
 
 def main():
     """Función principal"""

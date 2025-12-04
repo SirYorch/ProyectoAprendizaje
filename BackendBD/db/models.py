@@ -1,12 +1,15 @@
 from sqlalchemy import create_engine, Column, String, Integer, Numeric, Boolean, Date, DateTime, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.dialects.postgresql import LARGE_BINARY as LargeBinary
 from datetime import datetime
 
 import pandas as pd
 
 # Base para los modelos
 Base = declarative_base()
+
 
 # Modelo de la tabla productos
 class Producto(Base):
@@ -61,6 +64,33 @@ class RegistroInventario(Base):
     
     def __repr__(self):
         return f"<RegistroInventario(id='{self.id}', product_id='{self.product_id}', quantity_available={self.quantity_available})>"
+    
+class Document(Base):
+    __tablename__ = 'documents'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    text = Column(Text, nullable=False)
+    metadata = Column(JSON)
+
+    # Relación con embeddings
+    embeddings = relationship("Embedding", back_populates="document", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Document(id={self.id})>"
+
+
+class Embedding(Base):
+    __tablename__ = 'embeddings'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey('documents.id', ondelete='CASCADE'), nullable=False)
+    
+    vector = Column(LargeBinary, nullable=False)
+
+    document = relationship("Document", back_populates="embeddings")
+
+    def __repr__(self):
+        return f"<Embedding(id={self.id}, document_id={self.document_id})>"
 
 
 # Configuración de la conexión
