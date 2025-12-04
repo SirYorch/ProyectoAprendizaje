@@ -33,7 +33,7 @@ class RAGEmbedding(Base):
       - group_name: grupo general (ej. "prediccion", "faq", "saludo")
       - intent: intención específica (ej. "prediccion_por_producto_y_fecha")
       - meta: JSON con info extra (ej. parámetros esperados, ejemplo de prompt, etc.)
-      - embedding: vector(1536) almacenado con pgvector
+      - embedding: vector(768) almacenado con pgvector
     """
     __tablename__ = "rag_embeddings"
 
@@ -42,8 +42,7 @@ class RAGEmbedding(Base):
     group_name = Column(String(100), nullable=False, index=True)
     intent = Column(String(150), nullable=False, index=True)
     meta = Column(JSONB, nullable=True)
-    # ajusta la dimensión (1536, 1024, etc.) según tu modelo de embeddings
-    embedding = Column(Vector(1536), nullable=False, index=True)
+    embedding = Column(Vector(768), nullable=False)
 
     def __repr__(self) -> str:
         return f"<RAGEmbedding(id={self.id}, group='{self.group_name}', intent='{self.intent}')>"
@@ -276,7 +275,9 @@ if __name__ == "__main__":
         meta={"tipo": "intent", "descripcion": "Saludo estándar"}
     )
 
+    
+
     # Búsqueda de prueba
-    resultados = similarity_search(dummy_emb, top_k=3)
-    for r, dist in resultados:
-        print(f"- {r.id} | grupo={r.group_name} | intent={r.intent} | dist={dist:.4f}")
+    # resultados = similarity_search(dummy_emb, top_k=3)
+    # for r, dist in resultados:
+    #     print(f"- {r.id} | grupo={r.group_name} | intent={r.intent} | dist={dist:.4f}")
