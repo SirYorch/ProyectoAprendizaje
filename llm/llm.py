@@ -1,0 +1,2 @@
+def naturalice():
+    return "hola"
