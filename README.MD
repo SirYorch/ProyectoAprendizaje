@@ -3,22 +3,22 @@
 
 ## TODO: 
 Expresiones regulares
-- para saludos, agradecimientos y despedidas
+    - para saludos, agradecimientos y despedidas
 
 RAG retrieval data augmentation
-- da información sobre la empresa 
-    - Preguntas frecuentes
+    - da información sobre la empresa 
+        - Preguntas frecuentes
 
 maneje los métodos de predicción
-- Predicción stock 
-- Predicción stock con producto
-- Predicción stock con fecha
-- Predicción stock con fecha y producto
+    - Predicción stock 
+    - Predicción stock con producto
+    - Predicción stock con fecha
+    - Predicción stock con fecha y producto
 
 
 Agregar nuevos registros productos
-- en formato csv
-- Actualizar el modelo
+    - en formato csv
+    - Actualizar el modelo
 
 
 functiones a definir
