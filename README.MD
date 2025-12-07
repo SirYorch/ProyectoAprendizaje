@@ -2,12 +2,6 @@
 
 
 ## TODO: 
-Expresiones regulares
-    - para saludos, agradecimientos y despedidas
-
-RAG retrieval data augmentation
-    - da información sobre la empresa 
-        - Preguntas frecuentes
 
 maneje los métodos de predicción
     - Predicción stock 
@@ -24,32 +18,47 @@ Agregar nuevos registros productos
 functiones a definir
     - Productos más vendidos (query)
     - Productos menos vendido (query)
-    - Productos menos vendido (query)
-
-Comunicación LLM
-    - POST-http recibir mensajes
-
-TTS gratuito
-    - api que reciba texto, y devuelva audio
-
-Implementación con rhubarb
-    - carpeta de configuración
+    - nos falta una
 
 Langchain
     - Preguntas frecuentes
     - embeddings
     - documentos
 
-Docker
-    - Base de datos
 
-API
-    - API en fastapi
-
+## DONE: 
 FRONTEND
     - REACT para ventanas
 
-Parte de frontend
+
+fastapi - conexión
+
+    - predict all ( useLlm)
+    
+    - predict by product (Product, useLlm)
+    
+    - predict by date (Date, useLlm)
+    
+    - preduct by date and product (Date, product, useLlm)
+    
+    - chat (texto)
+
+Conexión llm - gemini
+    - naturalize (texto) -> texto
+
+Rhubarb - gestos faciales
+    - tts( audio )-> json
+
+api tts - gratuita
+    getAudio
 
 
-## DONE: 
+Expresiones regulares
+    - para saludos, agradecimientos y despedidas
+
+RAG retrieval data augmentation para faqs
+    - da información sobre la empresa 
+        - Preguntas frecuentes
+
+Docker
+    - Base de datos

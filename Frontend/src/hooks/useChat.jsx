@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 
 const ChatContext = createContext();
@@ -10,7 +10,7 @@ export const ChatProvider = ({ children }) => {
   const chat = async (message) => {
     setLoading(true);
     console.log("datos enviador = " +message)
-    const data = await fetch(`${backendUrl}/chat/test`, {
+    const data = await fetch(`${backendUrl}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

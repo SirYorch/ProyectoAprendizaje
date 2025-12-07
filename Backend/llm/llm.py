@@ -1,49 +1,22 @@
-import re
-import random
+from dotenv import load_dotenv
+load_dotenv()
 
-def naturalice():
-    return "hola"
+from google import genai
+import os
 
-def check_regex_response(user_text: str) -> str | None:
-    """
-    Analiza el texto buscando patrones simples de saludo, despedida o agradecimiento.
-    Retorna una respuesta inmediata si encuentra coincidencia, o None si no encuentra nada.
-    """
+client = genai.Client(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
 
-    text = user_text.lower()
 
-    # --- GRUPO A: SALUDOS ---
-    patron_saludos = r"\b(hola|oli|buenos d[íi]as|buenas tardes|buenas noches|que tal|hello)\b"
+
+
+def naturalize_response(base):
+    # En este método nos conectamos con la api de gemini de google, para obtener una respuesta naturalizada
     
-    if re.search(patron_saludos, text):
-        respuestas = [
-            "¡Hola! Bienvenido a Nombre. ¿En qué puedo ayudarte hoy?",
-            "¡Buenas! Soy tu asistente virtual. ¿Buscas stock o información?",
-            "¡Hola! Estoy listo para ayudarte con el inventario."
-        ]
-        return random.choice(respuestas)
-
-    # --- GRUPO B: DESPEDIDAS ---
-    patron_despedidas = r"\b(chao|adi[óo]s|hasta luego|nos vemos|bye|cu[íi]date)\b"
+    message = f'Eres un asistente de ventas  para una empresa de electrónicos llamada Arc -- tienda de electrónicos avanzada, de una forma amigable y cómoda, no uses decoradores de texto, es decir escribe principalmente lo necesario de forma amigable, y si el contenido no existe, da un mensaje de error.  Debes presentarle al usuario la siguiente información'+str(base)+"aqui terminan los datos, si estos se encuentran vacíos, presenta un mensaje de error, en lugar de datos incorrectos"
     
-    if re.search(patron_despedidas, text):
-        respuestas = [
-            "¡Hasta luego! Gracias por visitar Nombre.",
-            "¡Chao! Vuelve pronto.",
-            "Nos vemos. Espero haberte ayudado."
-        ]
-        return random.choice(respuestas)
-
-    # --- GRUPO C: AGRADECIMIENTOS ---
-    patron_agradecimientos = r"\b(gracias|te agradezco|muy amable|thx)\b"
-    
-    if re.search(patron_agradecimientos, text):
-        respuestas = [
-            "¡De nada! Es un placer ayudarte.",
-            "¡Para eso estamos!",
-            "Con gusto. ¿Necesitas algo más?"
-        ]
-        return random.choice(respuestas)
-
-    # Si no coincidió con nada, devolvemos None para que pase al siguiente filtro (RAG o LLM)
-    return None
+    response = client.models.generate_content(
+        model="gemini-2.5-flash", contents=message
+    )
+        
+    print(response.text)
+    return response.text
