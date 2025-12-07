@@ -3,11 +3,21 @@
 
 ## TODO: 
 
+--------
+ 
+ ## Partially done 
+
 maneje los métodos de predicción
     - Predicción stock 
     - Predicción stock con producto
     - Predicción stock con fecha
     - Predicción stock con fecha y producto
+
+Agregar nuevos registros productos
+    - en formato csv
+    - Actualizar el modelo
+
+--------
 
 Function Matcher:
     - expresiones regulares para obtener los parametros
@@ -15,24 +25,25 @@ Function Matcher:
     - llamado de funciones
 
 
-Agregar nuevos registros productos
-    - en formato csv
-    - Actualizar el modelo
-
-
 functiones a definir
     - Productos más vendidos (query)
     - Productos menos vendido (query)
-    - nos falta una
+    - generar reportes (csv)
+    - generar reportes (excel)
+
+función de cargar_csv
+
+## DONE: 
 
 Langchain
+
     - Preguntas frecuentes
     - embeddings
     - documentos
 
 
-## DONE: 
 FRONTEND
+
     - REACT para ventanas
 
 
@@ -49,21 +60,28 @@ fastapi - conexión
     - chat (texto)
 
 Conexión llm - gemini
+
     - naturalize (texto) -> texto
 
 Rhubarb - gestos faciales
+
     - tts( audio )-> json
 
 api tts - gratuita
+
     getAudio
 
 
 Expresiones regulares
+
     - para saludos, agradecimientos y despedidas
 
 RAG retrieval data augmentation para faqs
+
     - da información sobre la empresa 
+
         - Preguntas frecuentes
 
 Docker
+
     - Base de datos
