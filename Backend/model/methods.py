@@ -366,7 +366,7 @@ def predict_stock_range(
     final_result = None
 
     while current <= end:
-        res = predict_stock(
+        res = predict_stock_product_date(
             product_id=product_id,
             date=current.strftime("%Y-%m-%d"),
             use_cache=False

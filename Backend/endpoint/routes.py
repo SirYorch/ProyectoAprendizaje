@@ -343,7 +343,7 @@ async def chat(request: Dict[str, Any] = Body(...)):
 
     
     # #Valor en texto de las respuestas
-    # pred = naturalize_response(pred)
+    pred = naturalize_response(pred)
     
     # #Audio generado por gTTS
     # tts(pred)
@@ -354,37 +354,7 @@ async def chat(request: Dict[str, Any] = Body(...)):
     return {
             "messages": [
                 {
-                    "text": """¡Hola! Con gusto te ayudo con la información que necesitas.
-
-# Mira, 
-la función con la que trabajamos y que nos da la información más probable es predict_data.
-
-Aquí te muestro los resultados que obtuvimos:
-
-| Producto | Stock Predicho | Fecha | 
-|----------|----------------|-------| 
-| PROD-001 | 11 | 2025-01-15 | 
-| PROD-002 | 78 | 2025-01-15 | 
-| PROD-003 | 60 | 2025-01-15 | 
-| PROD-004 | 16 | 2025-01-15 | 
-| PROD-005 | 141 | 2025-01-15 | 
-| PROD-006 | 62 | 2025-01-15 | 
-| PROD-007 | 127 | 2025-01-15 | 
-| PROD-008 | 86 | 2025-01-15 | 
-| PROD-009 | 93 | 2025-01-15 | 
-| PROD-010 | 80 | 2025-01-15 | 
-| PROD-011 | 9 | 2025-01-15 | 
-| PROD-012 | 8 | 2025-01-15 | 
-| PROD-013 | 46 | 2025-01-15 | 
-| PROD-014 | 138 | 2025-01-15 | 
-| PROD-015 | 193 | 2025-01-15 | 
-| PROD-016 | 79 | 2025-01-15 | 
-| PROD-017 | 126 | 2025-01-15 | 
-| PROD-018 | 9 | 2025-01-15 | 
-| PROD-019 | 17 | 2025-01-15 | 
-| PROD-020 | 134 | 2025-01-15 |
-
-Espero que esta información te sea muy útil. Si tienes alguna otra pregunta, ¡aquí estoy para ayudarte!""",
+                    "text": pred,
                     "audio": audio_to_base64("audios/audio.wav"),
                     "lipsync": read_json("audios/audio.json"),
                     "facialExpression": "smile",
