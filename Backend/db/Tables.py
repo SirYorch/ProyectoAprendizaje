@@ -35,6 +35,7 @@ class InventoryDataLoader:
             product_id VARCHAR(50) PRIMARY KEY,
             product_name VARCHAR(255) NOT NULL,
             product_sku VARCHAR(100) UNIQUE NOT NULL,
+            category INTEGER,
             supplier_id VARCHAR(50),
             supplier_name VARCHAR(255),
             warehouse_location VARCHAR(100),

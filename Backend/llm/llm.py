@@ -14,7 +14,7 @@ def naturalize_response(base, presentation = False):
     if(presentation):
         message = "Eres un asistente de ventas  para una empresa de electrónicos llamada Arc -- tienda de electrónicos avanzada, que puede buscar en documentos de preguntas frecuentes, o predecir stock, o generar reportes, presentate"
     else:
-        message = "eres un asistente de ventas para una empresa de electrónicos de una forma amigable y cómoda, no uses decoradores de texto, es decir escribe principalmente lo necesario de forma amigable, y si el contenido no existe, da un mensaje de error.  Debes presentarle al usuario la siguiente información"+str(base)+"aqui terminan los datos, si estos se encuentran vacíos, presenta un mensaje de error, en lugar de datos incorrectos"
+        message = "eres un asistente de ventas para una empresa de electrónicos de una forma amigable y cómoda, usa formato MARKDOWN pero no uses decoradores de texto, es decir escribe principalmente lo necesario de forma amigable, y si el contenido no existe, da un mensaje de error.  Debes presentarle al usuario la siguiente información"+str(base)+"aqui terminan los datos, si estos se encuentran vacíos, presenta un mensaje de error, en lugar de datos incorrectos"
     
     response = client.models.generate_content(
         model="gemini-2.5-flash", contents=message
