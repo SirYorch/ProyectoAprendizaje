@@ -18,6 +18,7 @@ class Producto(Base):
     product_id = Column(String(50), primary_key=True)
     product_name = Column(String(255), nullable=False)
     product_sku = Column(String(100), unique=True, nullable=False)
+    category = Column(Integer)
     supplier_id = Column(String(50))
     supplier_name = Column(String(255))
     warehouse_location = Column(String(100))
@@ -399,7 +400,7 @@ if __name__ == "__main__":
     print("=" * 50)
     
     # 1. Crear tablas (si no existen)
-    # crear_tablas()
+    crear_tablas()
     
     # 2. Consultas
     print("\n[1] Listar productos:")
