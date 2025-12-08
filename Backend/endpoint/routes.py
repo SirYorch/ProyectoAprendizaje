@@ -5,6 +5,7 @@ from llm.llm import naturalize_response
 from datetime import date , timedelta
 from tts.textToSpeech import tts
 import base64
+import os
 import json
 from lipsync.lipsyncgen import generate_lipsync
 from ai.matcher import FunctionCaller
@@ -25,6 +26,18 @@ def audio_to_base64(path):
 def read_json(path):
     with open(path, "r") as f:
         return json.load(f)
+    
+def file_to_base64(file_path):
+    """
+    Convierte un archivo a base64 para enviarlo en el JSON.
+    """
+    try:
+        with open(file_path, 'rb') as f:
+            return base64.b64encode(f.read()).decode('utf-8')
+    except Exception as e:
+        print(f"Error al convertir archivo a base64: {e}")
+        return None
+
     
     
 
@@ -275,51 +288,50 @@ async def chat(request: Dict[str, Any] = Body(...)):
     query = request.get("message")
     print("chat request")
 
-    pred = "Se Envió la solicitud "+ query
-    file = None
+    pred = "Se Envió la solicitud " + query
+    file_data = None  # Cambiado de 'file' a 'file_data' para mayor claridad
+    file_name = None
+    file_type = None
     
-
-    #Aqui tiene que pasar el primer filtro, expresiones regulares para, saludos, agradecimientos y despedidas karen, haz que solo se presente en saludos, 
+    # Primer filtro: expresiones regulares
     regex_resp = check_regex_response(query)
     
     if regex_resp:
         print(" Respondido por Regex")
         pred = regex_resp
     else:
-        #Aqui tiene que pasar al segundo filtro, rag para detección de documentos, FAQ's y datos x
+        # Segundo filtro: RAG
         faq_resp = caller.consultar_faq(query)
 
         if faq_resp:
             print(f" Respondido por RAG (Confianza: {faq_resp['confianza']:.2f})")
-            # Aquí obtenemos la respuesta directa de la base de datos
             pred = faq_resp['respuesta'] 
         else:
-         #Aqui coloco el tercer filtro, function matcher
-            
+            # Tercer filtro: function matcher
             resultado = caller.identificar_funcion(query)
-
-            # print(resultado['funcion'])       #Resultados
-            # print(resultado['parametros'])   
-            # print(resultado['confianza'])    
             
-            if(resultado['confianza'] > 0.8):
-                pred = "La función con mayor probabilidad es " + resultado['funcion'] + "los resultados de la función son"
-                print("Funcion:" + resultado['funcion'] )
-                print("Confianza:" + str(resultado['confianza']) )
-                print("Confianza:" + str(resultado['confianza']) )
+            if resultado['confianza'] > 0.8:
+                pred = "La función con mayor probabilidad es " + resultado['funcion'] + " los resultados de la función son: "
+                print("Funcion: " + resultado['funcion'])
+                print("Confianza: " + str(resultado['confianza']))
                 
                 if str(resultado['funcion']) == "predict_stock":
-                    pred += await str(predict_stock()) # no necesita parametros
-                elif str(resultado['funcion']) == "predict_product":
-                    pred += await str(predict_product({ "name": resultado['parametros']['producto']}))
-                elif str(resultado['funcion']) == "predict_date":
-                    # print(resultado['parametros']['fecha'])
+                    pred += str(await predict_stock())
                     
-                    data = await predict_date({ "date":resultado['parametros']['fecha']})
+                elif str(resultado['funcion']) == "predict_product":
+                    pred += str(await predict_product({"name": resultado['parametros']['producto']}))
+                    
+                elif str(resultado['funcion']) == "predict_date":
+                    data = await predict_date({"date": resultado['parametros']['fecha']})
                     print(data)
                     pred += str(data)
+                    
                 elif str(resultado['funcion']) == "predict_product_fecha":
-                    pred += await str(predict_product_fecha({ "name":resultado['parametros']['producto'],"date": resultado['parametros']['fecha']}))
+                    pred += str(await predict_product_fecha({
+                        "name": resultado['parametros']['producto'],
+                        "date": resultado['parametros']['fecha']
+                    }))
+                    
                 elif str(resultado['funcion']) == "top_selling":
                     data = await top_selling()
                     pred += f"Los 5 productos más vendidos son: {str(data)}"
@@ -330,40 +342,58 @@ async def chat(request: Dict[str, Any] = Body(...)):
                     pred += f"Los 5 productos menos vendidos son: {str(data)}"
 
                 elif str(resultado['funcion']) == "generate_csv":
-                    month = resultado["parametros"].get("mes")  # opcional
-                    file = await generate_csv(month)
-                    pred = +f"Se generó el CSV en: {str(file)}"
+                    month = resultado["parametros"].get("mes")
+                    file_path = generate_csv(month)
+                    
+                    if file_path and os.path.exists(file_path):
+                        file_data = file_to_base64(file_path)
+                        file_name = os.path.basename(file_path)
+                        file_type = "text/csv"
+                        pred = f"Se generó el reporte CSV exitosamente: {file_name}"
+                    else:
+                        pred = "Error al generar el archivo CSV"
 
                 elif str(resultado['funcion']) == "generate_excel":
-                    month = resultado["parametros"].get("mes")  # opcional
-                    file = await generate_excel(month)
-                    pred = +f"Se generó el Excel en: {str(file)}"
+                    month = resultado["parametros"].get("mes")
+                    file_path = generate_excel(month)
+                    
+                    if file_path and os.path.exists(file_path):
+                        file_data = file_to_base64(file_path)
+                        file_name = os.path.basename(file_path)
+                        file_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        pred = f"Se generó el reporte Excel exitosamente: {file_name}"
+                    else:
+                        pred = "Error al generar el archivo Excel"
             else:
-                pred += "Lamentablemente no logré entender lo la solicitud, que haces, recuerda que puedo, hacer predicciónes tomando parametros como producto y fecha, y revisar productos más y menos vendidos, además de generar reportes en excel o csv."
+                pred = "Lamentablemente no logré entender la solicitud. Recuerda que puedo hacer predicciones tomando parámetros como producto y fecha, revisar productos más y menos vendidos, además de generar reportes en Excel o CSV."
 
+        # Naturalizar respuesta
+        pred = naturalize_response(pred)
     
-            # #Valor en texto de las respuestas
-            pred = naturalize_response(pred)
-    
-    # #Audio generado por gTTS
+    # Audio generado por gTTS
     tts(pred)
     
-    # #Json generado por rhubarb
+    # Json generado por rhubarb
     generate_lipsync(pred)
     
-    return {
-            "messages": [
-                {
-                    "text": pred,
-                    "audio": audio_to_base64("audios/audio.wav"),
-                    "lipsync": read_json("audios/audio.json"),
-                    "facialExpression": "smile",
-                    "animation": "Standing",
-                    "file": file
-                }
-            ]
+    # Construir respuesta
+    response_data = {
+        "text": pred,
+        "audio": audio_to_base64("audios/audio.wav"),
+        "lipsync": read_json("audios/audio.json"),
+        "facialExpression": "smile",
+        "animation": "Standing"
+    }
+    
+    # Agregar archivo solo si existe
+    if file_data:
+        response_data["file"] = {
+            "data": file_data,
+            "name": file_name,
+            "type": file_type
         }
-
+    
+    return {"messages": [response_data]}
 
 
 

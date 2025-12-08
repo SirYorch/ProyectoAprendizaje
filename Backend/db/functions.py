@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 import pandas as pd
+import os
 import uuid
 
 # ============================================
@@ -145,59 +146,6 @@ def least_selling():
         session.close()
 
 
-def generate_excel(month=None):
-    """
-    Genera un archivo Excel con los registros del último mes o un mes indicado.
-    Retorna la ruta del archivo generado.
-    
-    Args:
-        month: String en formato "YYYY-MM" (ej: "2024-12") o None para último mes
-    """
-    session = SessionLocal()
-    try:
-        if month:
-            año, mes = map(int, month.split("-"))
-            inicio = datetime(año, mes, 1)
-            if mes == 12:
-                fin = datetime(año + 1, 1, 1)
-            else:
-                fin = datetime(año, mes + 1, 1)
-        else:
-            fin = datetime.now()
-            inicio = fin - timedelta(days=30)
-
-        query = (
-            session.query(
-                RegistroInventario.id,
-                RegistroInventario.product_id,
-                RegistroInventario.created_at,
-                RegistroInventario.quantity_available,
-                RegistroInventario.ventas_diarias,
-                RegistroInventario.total_value
-            )
-            .filter(RegistroInventario.created_at >= inicio)
-            .filter(RegistroInventario.created_at < fin)
-        )
-
-        df = pd.read_sql(query.statement, session.bind)
-
-        # Crear directorio si no existe
-        import os
-        os.makedirs("reportes", exist_ok=True)
-        
-        file_path = f"reportes/reporte_{inicio.date()}_{fin.date()}.xlsx"
-        df.to_excel(file_path, index=False)
-
-        print(f"✓ Excel generado: {file_path}")
-        return file_path
-
-    except Exception as e:
-        print(f"✗ Error en generate_excel: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-    finally:
-        session.close()
 
 
 def generate_csv(month=None):
@@ -211,7 +159,6 @@ def generate_csv(month=None):
     session = SessionLocal()
     try:
         if month:
-            # formato esperado: "2025-01"
             año, mes = map(int, month.split("-"))
             inicio = datetime(año, mes, 1)
             if mes == 12:
@@ -221,7 +168,7 @@ def generate_csv(month=None):
         else:
             fin = datetime.now()
             inicio = fin - timedelta(days=30)
-
+        
         query = (
             session.query(
                 RegistroInventario.id,
@@ -236,9 +183,7 @@ def generate_csv(month=None):
         )
 
         df = pd.read_sql(query.statement, session.bind)
-
-        # Crear directorio si no existe
-        import os
+        
         os.makedirs("reportes", exist_ok=True)
         
         file_path = f"reportes/reporte_{inicio.date()}_{fin.date()}.csv"
@@ -249,6 +194,59 @@ def generate_csv(month=None):
 
     except Exception as e:
         print(f"✗ Error en generate_csv: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+    finally:
+        session.close()
+
+
+def generate_excel(month=None):
+    """
+    Genera un archivo Excel con los registros del último mes o del mes especificado.
+    Retorna la ruta del archivo generado.
+    
+    Args:
+        month: String en formato "YYYY-MM" (ej: "2024-12") o None para último mes
+    """
+    session = SessionLocal()
+    try:
+        if month:
+            año, mes = map(int, month.split("-"))
+            inicio = datetime(año, mes, 1)
+            if mes == 12:
+                fin = datetime(año + 1, 1, 1)
+            else:
+                fin = datetime(año, mes + 1, 1)
+        else:
+            fin = datetime.now()
+            inicio = fin - timedelta(days=30)
+        
+        query = (
+            session.query(
+                RegistroInventario.id,
+                RegistroInventario.product_id,
+                RegistroInventario.created_at,
+                RegistroInventario.quantity_available,
+                RegistroInventario.ventas_diarias,
+                RegistroInventario.total_value
+            )
+            .filter(RegistroInventario.created_at >= inicio)
+            .filter(RegistroInventario.created_at < fin)
+        )
+
+        df = pd.read_sql(query.statement, session.bind)
+        
+        os.makedirs("reportes", exist_ok=True)
+        
+        file_path = f"reportes/reporte_{inicio.date()}_{fin.date()}.xlsx"
+        df.to_excel(file_path, index=False, engine='openpyxl')
+
+        print(f"✓ Excel generado: {file_path}")
+        return file_path
+
+    except Exception as e:
+        print(f"✗ Error en generate_excel: {e}")
         import traceback
         traceback.print_exc()
         return None
