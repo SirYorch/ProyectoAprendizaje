@@ -238,13 +238,13 @@ async def chat(request: Dict[str, Any] = Body(...)):
     
     
     # #Valor en texto de las respuestas
-    # pred = naturalize_response(pred)
+    pred = naturalize_response(pred)
     
     # #Audio generado por gTTS
-    # tts(pred)
+    tts(pred)
     
     # #Json generado por rhubarb
-    # generate_lipsync(pred)
+    generate_lipsync(pred)
     
     return {
             "messages": [
