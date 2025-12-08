@@ -302,34 +302,40 @@ async def chat(request: Dict[str, Any] = Body(...)):
                 # print(resultado['parametros'])   
                 # print(resultado['confianza'])    
                 
-                if(resultado['confianza'] > 0.9):
+                if(resultado['confianza'] > 0.8):
                     pred = "La función con mayor probabilidad es " + resultado['funcion'] + "los resultados de la función son"
-                    if resultado['funcion'] == "predict_stock":
-                        pred += predict_stock() # no necesita parametros
-                    if resultado['funcion'] == "predict_product":
-                        pred += predict_product({ "name": resultado['parametros']['producto']})
-                    if resultado['funcion'] == "predict_date":
+                    print("Funcion:" + resultado['funcion'] )
+                    print("Confianza:" + str(resultado['confianza']) )
+                    print("Confianza:" + str(resultado['confianza']) )
+                    
+                    if str(resultado['funcion']) == "predict_stock":
+                        pred += await predict_stock() # no necesita parametros
+                    if str(resultado['funcion']) == "predict_product":
+                        pred += await predict_product({ "name": resultado['parametros']['producto']})
+                    if str(resultado['funcion']) == "predict_date":
                         # print(resultado['parametros']['fecha'])
-                        pred += predict_date({ "date":resultado['parametros']['fecha']})
-                    if resultado['funcion'] == "predict_product_fecha":
+                        
+                        data = await predict_date({ "date":resultado['parametros']['fecha']})
+                        pred += data 
+                    if str(resultado['funcion']) == "predict_product_fecha":
                         pred += predict_product_fecha({ "name":resultado['parametros']['producto'],"date": resultado['parametros']['fecha']})
-                    if resultado['funcion'] == "top_selling":
-                        data = top_selling()
+                    if str(resultado['funcion']) == "top_selling":
+                        data = await top_selling()
                         pred += f"Los 5 productos más vendidos son: {data}"
 
-                    elif resultado['funcion'] == "least_selling":
-                        data = least_selling()
+                    elif str(resultado['funcion']) == "least_selling":
+                        data = await least_selling()
                         print(data)
                         pred += f"Los 5 productos menos vendidos son: {data}"
 
-                    elif resultado['funcion'] == "generate_csv":
+                    elif str(resultado['funcion']) == "generate_csv":
                         month = resultado["parametros"].get("mes")  # opcional
-                        file = generate_csv(month)
+                        file = await generate_csv(month)
                         pred = +f"Se generó el CSV en: {file}"
 
-                    elif resultado['funcion'] == "generate_excel":
+                    elif str(resultado['funcion']) == "generate_excel":
                         month = resultado["parametros"].get("mes")  # opcional
-                        file = generate_excel(month)
+                        file = await generate_excel(month)
                         pred = +f"Se generó el Excel en: {file}"
                     
             except Exception as e:
