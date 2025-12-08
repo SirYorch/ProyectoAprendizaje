@@ -6,7 +6,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 
-
 export function Llm() {
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
@@ -21,6 +20,7 @@ export function Llm() {
       const respuestaBot = {
         remitente: "CHAT",
         texto: message.text,
+        archivo: message.file || null // Guardar info del archivo si existe
       };
       setMensajes((prev) => [...prev, respuestaBot]);
     }
@@ -42,10 +42,8 @@ export function Llm() {
 
     try {
       // Llamar al backend a través de useChat
+      // El archivo se descargará automáticamente en el ChatContext
       await chat(mensajeEnviado);
-      
-      // La respuesta (text) se mostrará automáticamente 
-      // gracias al useEffect que escucha 'message'
       
     } catch (err) {
       console.error("Error al enviar mensaje:", err);
@@ -95,7 +93,26 @@ export function Llm() {
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                         {m.texto}
                       </ReactMarkdown>
-                      {/* {m.texto} */}
+                      
+                      {/* Indicador de archivo descargado */}
+                      {m.archivo && (
+                        <div className="mt-2 flex items-center gap-2 text-sm bg-white/30 rounded-lg px-3 py-2">
+                          <svg 
+                            className="w-4 h-4" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" 
+                            />
+                          </svg>
+                          <span>✓ Archivo descargado: {m.archivo.name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

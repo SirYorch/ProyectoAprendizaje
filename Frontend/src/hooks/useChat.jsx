@@ -2,55 +2,102 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-
 const ChatContext = createContext();
 
 export const ChatProvider = ({ children }) => {
+  const [messages, setMessages] = useState([]);
+  const [message, setMessage] = useState();
+  const [loading, setLoading] = useState(false);
+  const [cameraZoomed, setCameraZoomed] = useState(true);
   
   const chat = async (message) => {
     setLoading(true);
-    console.log("datos enviador = " +message)
-    const data = await fetch(`${backendUrl}/api/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message }),
-    });
+    console.log("datos enviados = " + message);
+    
+    try {
+      const data = await fetch(`${backendUrl}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+      });
 
-
-    const resp = (await data.json()).messages;
-    console.log(resp)
-    setMessages((messages) => [...messages, ...resp]);
-    setLoading(false);
+      const response = await data.json();
+      const resp = response.messages;
+      
+      console.log("Respuesta del backend:", resp);
+      
+      // Verificar si hay archivo en la respuesta
+      if (resp[0]?.file) {
+        console.log("✓ Archivo recibido:", resp[0].file.name);
+        
+        // Descargar el archivo automáticamente
+        descargarArchivo(resp[0].file);
+      }
+      
+      setMessages((messages) => [...messages, ...resp]);
+    } catch (error) {
+      console.error("Error en chat:", error);
+    } finally {
+      setLoading(false);
+    }
   };
   
-  
+  const descargarArchivo = (fileInfo) => {
+    try {
+      const { data: fileData, name: fileName, type: fileType } = fileInfo;
+      
+      // Convertir base64 a bytes
+      const byteCharacters = atob(fileData);
+      const byteNumbers = new Array(byteCharacters.length);
+      
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: fileType });
+      
+      // Crear URL temporal y descargar
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log(`✓ Archivo descargado: ${fileName}`);
+    } catch (err) {
+      console.error("Error al descargar archivo:", err);
+    }
+  };
 
   const setAnimationChat = async (animationName) => {
     setLoading(true);
 
     const forcedMessage = {
-      text: "",               // opcional, si no quieres mostrar texto
-      audio: null,            // si no hay audio
-      lipsync: null,          // si no hay lipsync
+      text: "",
+      audio: null,
+      lipsync: null,
       facialExpression: "default",
       animation: animationName,
     };
-    const it = [forcedMessage]
-    console.log(it)
+    
+    const it = [forcedMessage];
+    console.log(it);
+    
     // Esto disparará el useEffect del Avatar
-    setMessage(forcedMessage)
+    setMessage(forcedMessage);
     setLoading(false);
 
     return forcedMessage;
   };
 
-  
-  const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState();
-  const [loading, setLoading] = useState(false);
-  const [cameraZoomed, setCameraZoomed] = useState(true);
   const onMessagePlayed = () => {
     setMessages((messages) => messages.slice(1));
   };
