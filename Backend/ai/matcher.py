@@ -166,4 +166,38 @@ class FunctionCaller:
                 return f"{año}-{mes_num}"
         
         return None
+    
+    def consultar_faq(self, mensaje: str) -> Dict[str, Any]:
+        """
+        Busca en la tabla FAQKnowledge
+        """
+        session = self.SessionLocal()
+        try:
+            # 1. Vectorizar pregunta
+            embedding = self.model.encode([mensaje])[0].tolist()
+
+            # 2. Buscar en la tabla de FAQs (NO en la de funciones)
+            result = session.execute(text("""
+                SELECT 
+                    pregunta,
+                    respuesta,
+                    categoria,
+                    1 - (embedding <=> :embedding) as similarity
+                FROM faq_knowledge
+                ORDER BY embedding <=> :embedding
+                LIMIT 1
+            """), {"embedding": str(embedding)}).fetchone()
+
+            # 3. Umbral un poco más bajo para FAQs (0.5) para ser flexible
+            if not result or result[3] < 0.5:
+                return None
+
+            return {
+                "tipo": "faq",
+                "pregunta": result[0],
+                "respuesta": result[1],
+                "confianza": result[3]
+            }
+        finally:
+            session.close()
 

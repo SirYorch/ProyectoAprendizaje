@@ -8,6 +8,7 @@ import json
 from lipsync.lipsyncgen import generate_lipsync
 from ai.matcher import FunctionCaller
 from db.functions import generate_csv , generate_excel, top_selling, least_selling
+from llm.agent import check_regex_response
 
 
 router = APIRouter()
@@ -185,57 +186,66 @@ async def chat(request: Dict[str, Any] = Body(...)):
     
     query = request.get("message")
     print("chat request")
-    
-    #Aqui tiene que pasar el primer filtro, expresiones regulares para, saludos, agradecimientos y despedidas karen, haz que solo se presente en saludos, 
-    
-    #Aqui tiene que pasar al segundo filtro, rag para detección de documentos, FAQ's y datos x
-    
-    #Aqui coloco el tercer filtro, function matcher
-    pred = "Se Envió la solicitud"+query
-    
+
+    pred = "Se Envió la solicitud "+ query
     file = None
     
-    try:
-        resultado = caller.identificar_funcion(query)
 
-        # print(resultado['funcion'])       #Resultados
-        # print(resultado['parametros'])   
-        # print(resultado['confianza'])    
-        
-        if(resultado['confianza'] > 0.9):
-            if resultado['funcion'] == "predict_stock":
-                predict_stock() # no necesita parametros
-            if resultado['funcion'] == "predict_product":
-                predict_product({ "name": resultado['parametros']['producto']})
-            if resultado['funcion'] == "predict_date":
-                # print(resultado['parametros']['fecha'])
-                predict_date({ "date":resultado['parametros']['fecha']})
-            if resultado['funcion'] == "predict_product_fecha":
-                predict_product_fecha({ "name":resultado['parametros']['producto'],"date": resultado['parametros']['fecha']})
-            if resultado['funcion'] == "top_selling":
-                data = top_selling()
-                pred = f"Los 5 productos más vendidos son: {data}"
-
-            elif resultado['funcion'] == "least_selling":
-                data = least_selling()
-                pred = f"Los 5 productos menos vendidos son: {data}"
-
-            elif resultado['funcion'] == "generate_csv":
-                month = resultado["parametros"].get("mes")  # opcional
-                file = generate_csv(month)
-                pred = f"Se generó el CSV en: {file}"
-
-            elif resultado['funcion'] == "generate_excel":
-                month = resultado["parametros"].get("mes")  # opcional
-                file = generate_excel(month)
-                pred = f"Se generó el Excel en: {file}"
-            
-
-    except Exception as e:
-        print("ERROR en identificar_funcion:", e)
-        pred += "Lamentablemente no logré entender lo la solicitud, que haces, recuerda que puedo, hacer predicciónes tomando parametros como producto y fecha, y revisar productos más y menos vendidos, además de generar reportes en excel o csv."
+    #Aqui tiene que pasar el primer filtro, expresiones regulares para, saludos, agradecimientos y despedidas karen, haz que solo se presente en saludos, 
+    regex_resp = check_regex_response(query)
     
-    
+    if regex_resp:
+        print(" Respondido por Regex")
+        pred = regex_resp
+    else:
+        #Aqui tiene que pasar al segundo filtro, rag para detección de documentos, FAQ's y datos x
+        faq_resp = caller.consultar_faq(query)
+
+        if faq_resp:
+            print(f" Respondido por RAG (Confianza: {faq_resp['confianza']:.2f})")
+            # Aquí obtenemos la respuesta directa de la base de datos
+            pred = faq_resp['respuesta'] 
+        else:
+         #Aqui coloco el tercer filtro, function matcher
+            try:
+                resultado = caller.identificar_funcion(query)
+
+                # print(resultado['funcion'])       #Resultados
+                # print(resultado['parametros'])   
+                # print(resultado['confianza'])    
+                
+                if(resultado['confianza'] > 0.9):
+                    if resultado['funcion'] == "predict_stock":
+                        predict_stock() # no necesita parametros
+                    if resultado['funcion'] == "predict_product":
+                        predict_product({ "name": resultado['parametros']['producto']})
+                    if resultado['funcion'] == "predict_date":
+                        # print(resultado['parametros']['fecha'])
+                        predict_date({ "date":resultado['parametros']['fecha']})
+                    if resultado['funcion'] == "predict_product_fecha":
+                        predict_product_fecha({ "name":resultado['parametros']['producto'],"date": resultado['parametros']['fecha']})
+                    if resultado['funcion'] == "top_selling":
+                        data = top_selling()
+                        pred = f"Los 5 productos más vendidos son: {data}"
+
+                    elif resultado['funcion'] == "least_selling":
+                        data = least_selling()
+                        pred = f"Los 5 productos menos vendidos son: {data}"
+
+                    elif resultado['funcion'] == "generate_csv":
+                        month = resultado["parametros"].get("mes")  # opcional
+                        file = generate_csv(month)
+                        pred = f"Se generó el CSV en: {file}"
+
+                    elif resultado['funcion'] == "generate_excel":
+                        month = resultado["parametros"].get("mes")  # opcional
+                        file = generate_excel(month)
+                        pred = f"Se generó el Excel en: {file}"
+                    
+            except Exception as e:
+                print("ERROR en identificar_funcion:", e)
+                pred += "Lamentablemente no logré entender lo la solicitud, que haces, recuerda que puedo, hacer predicciónes tomando parametros como producto y fecha, y revisar productos más y menos vendidos, además de generar reportes en excel o csv."
+
     
     # #Valor en texto de las respuestas
     pred = naturalize_response(pred)
