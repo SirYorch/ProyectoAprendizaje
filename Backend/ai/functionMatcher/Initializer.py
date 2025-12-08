@@ -79,52 +79,6 @@ class ConversationLog(Base):
 # 3. DEFINICIONES DE FUNCIONES
 # ============================================
 
-
-# sin argumentos
-# UPDATE function_definitions
-# SET nombre = 'predict_stock'
-# WHERE id = 'func_001';
-
-# # con producto
-# UPDATE function_definitions
-# SET nombre = 'predict_product'
-# WHERE id = 'func_002';
-
-
-# # con fecha
-# UPDATE function_definitions
-# SET nombre = 'predict_date'
-# WHERE id = 'func_003';
-
-# # con fecha y producto
-# UPDATE function_definitions
-# SET nombre = 'predict_product_fecha'
-# WHERE id = 'func_004';
-
-
-# # get best sellers
-# UPDATE function_definitions
-# SET nombre = 'top_selling'
-# WHERE id = 'func_005';
-
-# # get worst Sellers
-# UPDATE function_definitions
-# SET nombre = 'least_selling'
-# WHERE id = 'func_006';
-
-
-# # generate csv
-# UPDATE function_definitions
-# SET nombre = 'generate_csv'
-# WHERE id = 'func_007';
-
-# # generate excel
-# UPDATE function_definitions
-# SET nombre = 'generate_excel'
-# WHERE id = 'func_008';
-
-
-
 FUNCTION_DEFINITIONS = [
     {
         "id": "func_001",
@@ -306,8 +260,8 @@ def setup_database():
         conn.commit()
     print("✅ Extensión pgvector habilitada")
     
-    # Crear todas las tablas
-    Base.metada.create_all(bind=engine)
+    # Crear todas las tablas - ¡CORREGIDO EL TYPO!
+    Base.metadata.create_all(bind=engine)
     print("✅ Tablas creadas")
     
     # Crear índices para búsqueda vectorial (HNSW es más rápido que IVFFlat)
@@ -361,7 +315,7 @@ def indexar_funciones():
             ).first()
             
             if existing:
-                print(f"⏭Función {func_def['nombre']} ya existe, saltando...")
+                print(f"⏭  Función {func_def['nombre']} ya existe, saltando...")
                 continue
             
             # Genera embedding de la descripción completa
@@ -506,6 +460,8 @@ def initialize_chatbot_db(force_reindex: bool = False):
         
     except Exception as e:
         print(f"\n❌ Error durante la inicialización: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -561,6 +517,8 @@ def verificar_setup():
         
     except Exception as e:
         print(f"\n❌ Error en verificación: {e}")
+        import traceback
+        traceback.print_exc()
         return False
     finally:
         session.close()
