@@ -295,62 +295,61 @@ async def chat(request: Dict[str, Any] = Body(...)):
             pred = faq_resp['respuesta'] 
         else:
          #Aqui coloco el tercer filtro, function matcher
-            try:
-                resultado = caller.identificar_funcion(query)
+            
+            resultado = caller.identificar_funcion(query)
 
-                # print(resultado['funcion'])       #Resultados
-                # print(resultado['parametros'])   
-                # print(resultado['confianza'])    
+            # print(resultado['funcion'])       #Resultados
+            # print(resultado['parametros'])   
+            # print(resultado['confianza'])    
+            
+            if(resultado['confianza'] > 0.8):
+                pred = "La función con mayor probabilidad es " + resultado['funcion'] + "los resultados de la función son"
+                print("Funcion:" + resultado['funcion'] )
+                print("Confianza:" + str(resultado['confianza']) )
+                print("Confianza:" + str(resultado['confianza']) )
                 
-                if(resultado['confianza'] > 0.8):
-                    pred = "La función con mayor probabilidad es " + resultado['funcion'] + "los resultados de la función son"
-                    print("Funcion:" + resultado['funcion'] )
-                    print("Confianza:" + str(resultado['confianza']) )
-                    print("Confianza:" + str(resultado['confianza']) )
+                if str(resultado['funcion']) == "predict_stock":
+                    pred += await str(predict_stock()) # no necesita parametros
+                elif str(resultado['funcion']) == "predict_product":
+                    pred += await str(predict_product({ "name": resultado['parametros']['producto']}))
+                elif str(resultado['funcion']) == "predict_date":
+                    # print(resultado['parametros']['fecha'])
                     
-                    if str(resultado['funcion']) == "predict_stock":
-                        pred += await predict_stock() # no necesita parametros
-                    if str(resultado['funcion']) == "predict_product":
-                        pred += await predict_product({ "name": resultado['parametros']['producto']})
-                    if str(resultado['funcion']) == "predict_date":
-                        # print(resultado['parametros']['fecha'])
-                        
-                        data = await predict_date({ "date":resultado['parametros']['fecha']})
-                        pred += data 
-                    if str(resultado['funcion']) == "predict_product_fecha":
-                        pred += predict_product_fecha({ "name":resultado['parametros']['producto'],"date": resultado['parametros']['fecha']})
-                    if str(resultado['funcion']) == "top_selling":
-                        data = await top_selling()
-                        pred += f"Los 5 productos más vendidos son: {data}"
+                    data = await predict_date({ "date":resultado['parametros']['fecha']})
+                    print(data)
+                    pred += str(data)
+                elif str(resultado['funcion']) == "predict_product_fecha":
+                    pred += await str(predict_product_fecha({ "name":resultado['parametros']['producto'],"date": resultado['parametros']['fecha']}))
+                elif str(resultado['funcion']) == "top_selling":
+                    data = await top_selling()
+                    pred += f"Los 5 productos más vendidos son: {str(data)}"
 
-                    elif str(resultado['funcion']) == "least_selling":
-                        data = await least_selling()
-                        print(data)
-                        pred += f"Los 5 productos menos vendidos son: {data}"
+                elif str(resultado['funcion']) == "least_selling":
+                    data = await least_selling()
+                    print(data)
+                    pred += f"Los 5 productos menos vendidos son: {str(data)}"
 
-                    elif str(resultado['funcion']) == "generate_csv":
-                        month = resultado["parametros"].get("mes")  # opcional
-                        file = await generate_csv(month)
-                        pred = +f"Se generó el CSV en: {file}"
+                elif str(resultado['funcion']) == "generate_csv":
+                    month = resultado["parametros"].get("mes")  # opcional
+                    file = await generate_csv(month)
+                    pred = +f"Se generó el CSV en: {str(file)}"
 
-                    elif str(resultado['funcion']) == "generate_excel":
-                        month = resultado["parametros"].get("mes")  # opcional
-                        file = await generate_excel(month)
-                        pred = +f"Se generó el Excel en: {file}"
-                    
-            except Exception as e:
-                print("ERROR en identificar_funcion:", e)
+                elif str(resultado['funcion']) == "generate_excel":
+                    month = resultado["parametros"].get("mes")  # opcional
+                    file = await generate_excel(month)
+                    pred = +f"Se generó el Excel en: {str(file)}"
+            else:
                 pred += "Lamentablemente no logré entender lo la solicitud, que haces, recuerda que puedo, hacer predicciónes tomando parametros como producto y fecha, y revisar productos más y menos vendidos, además de generar reportes en excel o csv."
 
     
     # #Valor en texto de las respuestas
-    pred = naturalize_response(pred)
+    # pred = naturalize_response(pred)
     
     # #Audio generado por gTTS
-    tts(pred)
+    # tts(pred)
     
     # #Json generado por rhubarb
-    generate_lipsync(pred)
+    # generate_lipsync(pred)
     
     return {
             "messages": [
