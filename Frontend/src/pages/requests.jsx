@@ -5,6 +5,11 @@ export function Requests() {
 
   const { chat, loading, cameraZoomed, setCameraZoomed, message, setAnimationChat } = useChat();
     
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modeloCandidato, setModeloCandidato] = useState(null);
+  const [loadingDecision, setLoadingDecision] = useState(false);
+  const [decisionMessage, setDecisionMessage] = useState(null);
+
 
 
   // FORMULARIO
@@ -179,13 +184,56 @@ const subirCSV = async (event) => {
     if (!res.ok) throw new Error("Error subiendo CSV");
 
     const r = await res.json();
-    setRespuesta("Modelo reentrenado.");
     setRespuestaModelo(r);
+
+    // Aquí abrimos el modal
+    setModeloCandidato(r);
+    setModalOpen(true);
+
   } catch (err) {
     setError("Error subiendo CSV");
+  } finally {}
+};
+
+const aprobarModelo = async () => {
+  if (!modeloCandidato?.version) return;
+  setLoadingDecision(true);
+
+  try {
+    const res = await fetch(`${API_URL}/retrain/approve/${modeloCandidato.version}`, {
+      method: "POST"
+    });
+
+    const data = await res.json();
+
+    setDecisionMessage("Modelo APLICADO correctamente ");
+  } catch (err) {
+    setDecisionMessage("Error aprobando modelo ");
   } finally {
+    setLoadingDecision(false);
   }
 };
+
+
+const rechazarModelo = async () => {
+  if (!modeloCandidato?.version) return;
+  setLoadingDecision(true);
+
+  try {
+    const res = await fetch(`${API_URL}/retrain/reject/${modeloCandidato.version}`, {
+      method: "POST"
+    });
+
+    const data = await res.json();
+
+    setDecisionMessage("Modelo RECHAZADO correctamente ");
+  } catch (err) {
+    setDecisionMessage("Error rechazando modelo ");
+  } finally {
+    setLoadingDecision(false);
+  }
+};
+
 
 
   // ---------- RENDER ----------
@@ -348,6 +396,73 @@ const subirCSV = async (event) => {
           />
         </div>
       </div>
+            {modalOpen && modeloCandidato && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl">
+
+            <h2 className="text-2xl font-bold text-center mb-3 text-[#0f2c63]">
+              Modelo candidato listo
+            </h2>
+
+            <p className="text-center text-sm text-gray-600 mb-4">
+              Versión: <span className="font-bold">{modeloCandidato.version}</span>
+            </p>
+
+            <div className="bg-gray-100 rounded-lg p-4 mb-4">
+              <p className="font-semibold text-lg">Comparación de métricas</p>
+
+              <div className="mt-2 text-sm">
+                <p><b>RMSE actual:</b> {modeloCandidato.metricas_anterior.rmse.toFixed(4)}</p>
+                <p><b>RMSE nuevo:</b> {modeloCandidato.metricas_nuevo.rmse.toFixed(4)}</p>
+                <p className="text-[#ffb703] font-bold">
+                  Cambio: {modeloCandidato.comparacion.rmse_cambio.toFixed(2)}%
+                </p>
+
+                <hr className="my-2" />
+
+                <p><b>MAE actual:</b> {modeloCandidato.metricas_anterior.mae.toFixed(4)}</p>
+                <p><b>MAE nuevo:</b> {modeloCandidato.metricas_nuevo.mae.toFixed(4)}</p>
+                <p className="text-[#ffb703] font-bold">
+                  Cambio: {modeloCandidato.comparacion.mae_cambio.toFixed(2)}%
+                </p>
+              </div>
+            </div>
+
+            {decisionMessage && (
+              <div className="bg-blue-100 text-[#0f2c63] text-center p-3 rounded-lg mb-4">
+                {decisionMessage}
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-between mt-4">
+              <button
+                onClick={aprobarModelo}
+                disabled={loadingDecision}
+                className="flex-1 bg-[#ffb703] text-white py-2 rounded-lg hover:bg-[#e6ac00]"
+              >
+                {loadingDecision ? "Procesando..." : "Aprobar"}
+              </button>
+
+              <button
+                onClick={rechazarModelo}
+                disabled={loadingDecision}
+                className="flex-1 bg-[#0f2c63] text-white py-2 rounded-lg hover:bg-[#0b224b]"
+              >
+                {loadingDecision ? "Procesando..." : "Rechazar"}
+              </button>
+            </div>
+
+            <button
+              onClick={() => setModalOpen(false)}
+              className="mt-4 w-full py-2 bg-gray-300 rounded-lg hover:bg-gray-400"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
+    
   );
 }
