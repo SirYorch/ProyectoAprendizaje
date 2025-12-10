@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Body, UploadFile, File, Query, HTTPException
 
 from typing import Any, Dict
+from model.retrain import retrain_from_csv
 from llm.llm import naturalize_response
 from datetime import date , timedelta
 from tts.textToSpeech import tts
@@ -433,13 +434,13 @@ async def upload_and_retrain(
         # Este método debe ser reemplazado con la parte correcta
         resultado = {}
         # # Llamada a la función del modelo
-        # resultado = retrain_from_csv(
-        #     csv_content=contents,
-        #     filename=file.filename,
-        #     epochs=epochs,
-        #     batch_size=batch_size,
-        #     umbral_degradacion=umbral_degradacion
-        # )
+        resultado = retrain_from_csv(
+            csv_content=contents,
+            filename=file.filename,
+            epochs=epochs,
+            batch_size=batch_size,
+            umbral_degradacion=umbral_degradacion
+        )
         
         
 

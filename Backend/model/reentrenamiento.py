@@ -236,14 +236,13 @@ def reentrenar_modelo(
         logger.info("\n Paso 1: Cargando dataset preparado desde PostgreSQL...")
 
         from model.db_loader import load_inventory_dataset
+        df = load_inventory_dataset()
 
-        df_old = load_inventory_dataset()
-
-        if df_old is None or len(df_old) == 0:
+        if df is None or len(df) == 0:
             raise ValueError("No se pudo cargar dataset desde la base de datos.")
 
-        logger.info(f"   ✓ Dataset antiguo cargado desde BD: {len(df_old)} filas")
-        logger.info(f"   ✓ Rango temporal: {df_old['created_at'].min().date()} → {df_old['created_at'].max().date()}")
+        logger.info(f"   ✓ Dataset antiguo cargado desde BD: {len(df)} filas")
+        logger.info(f"   ✓ Rango temporal: {df['created_at'].min().date()} → {df['created_at'].max().date()}")
 
 
     
