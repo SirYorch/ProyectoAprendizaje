@@ -369,7 +369,7 @@ async def chat(request: Dict[str, Any] = Body(...)):
                 pred = "Lamentablemente no logré entender la solicitud. Recuerda que puedo hacer predicciones tomando parámetros como producto y fecha, revisar productos más y menos vendidos, además de generar reportes en Excel o CSV."
 
         # Naturalizar respuesta
-        pred = naturalize_response(pred)
+        # pred = naturalize_response(pred)
     
     # Audio generado por gTTS
     tts(pred)
