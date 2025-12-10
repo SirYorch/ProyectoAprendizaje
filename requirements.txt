@@ -13,3 +13,4 @@ google-genai
 gtts
 pydub
 python-multipart
+openpyxl
