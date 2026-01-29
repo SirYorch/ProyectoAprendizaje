@@ -1,0 +1,14 @@
+2025-12-10 01:29:35,225 - INFO - Use pytorch device_name: cpu
+2025-12-10 01:29:35,225 - INFO - Load pretrained SentenceTransformer: paraphrase-multilingual-MiniLM-L12-v2
+2025-12-10 01:29:48,107 - INFO - Use pytorch device_name: cpu
+2025-12-10 01:29:48,107 - INFO - Load pretrained SentenceTransformer: paraphrase-multilingual-MiniLM-L12-v2
+2025-12-10 01:34:10,639 - INFO - Use pytorch device_name: cpu
+2025-12-10 01:34:10,639 - INFO - Load pretrained SentenceTransformer: paraphrase-multilingual-MiniLM-L12-v2
+2025-12-10 01:35:22,012 - INFO - AFC is enabled with max remote calls: 10.
+2025-12-10 01:35:26,784 - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2025-12-10 01:41:25,015 - INFO - Use pytorch device_name: cpu
+2025-12-10 01:41:25,015 - INFO - Load pretrained SentenceTransformer: paraphrase-multilingual-MiniLM-L12-v2
+2025-12-10 01:41:36,691 - INFO - AFC is enabled with max remote calls: 10.
+2025-12-10 01:41:40,242 - INFO - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+2025-12-10 01:42:03,743 - INFO - Use pytorch device_name: cpu
+2025-12-10 01:42:03,743 - INFO - Load pretrained SentenceTransformer: paraphrase-multilingual-MiniLM-L12-v2

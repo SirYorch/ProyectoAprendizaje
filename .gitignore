@@ -4,3 +4,5 @@ audios/
 .vscode
 __pycache__/
 *.pyc
+Backend/files/candidates/
+Backend/files/model_versions/

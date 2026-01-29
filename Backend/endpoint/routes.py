@@ -368,8 +368,13 @@ router = APIRouter()
 #             else:
 #                 pred = "Lamentablemente no logré entender la solicitud. Recuerda que puedo hacer predicciones tomando parámetros como producto y fecha, revisar productos más y menos vendidos, además de generar reportes en Excel o CSV."
 
+<<<<<<< HEAD
 #         # Naturalizar respuesta
 #         pred = naturalize_response(pred)
+=======
+        # Naturalizar respuesta
+        # pred = naturalize_response(pred)
+>>>>>>> dcb4b415495740ad8f9d253694b65d84d133b65f
     
 #     # Audio generado por gTTS
 #     tts(pred)
@@ -398,6 +403,7 @@ router = APIRouter()
 
 
 
+<<<<<<< HEAD
 # @router.post(
 #     "/upload/retrain",
 #     summary="Cargar CSV y reentrenar modelo",
@@ -412,6 +418,24 @@ router = APIRouter()
 #     """
 #     Recibe un archivo CSV, lo procesa y reentrena el modelo.
 #     """
+=======
+@router.post(
+    "/upload/retrain",
+    summary="Cargar CSV y reentrenar modelo",
+    description="Sube un archivo CSV con datos nuevos para reentrenar el modelo"
+)
+async def upload_and_retrain(
+    file: UploadFile = File(..., description="Archivo CSV con datos de entrenamiento"),
+    epochs: int = Query(5, description="Número de épocas para reentrenamiento", ge=1, le=100),
+    batch_size: int = Query(128, description="Tamaño del batch", ge=16, le=512),
+    umbral_degradacion: float = Query(0.1, description="Porcentaje de degradación aceptable", ge=0.0, le=1.0),
+    modo: str = Query("manual", description="Modo de reentrenamiento: 'automatico' o 'manual'"),
+    cargar_a_bd: bool = Query(False, description="Si cargar el CSV a PostgreSQL antes de reentrenar")
+) -> Dict[str, Any]:
+    """
+    Recibe un archivo CSV, lo procesa y reentrena el modelo.
+    """
+>>>>>>> dcb4b415495740ad8f9d253694b65d84d133b65f
 
 #     # Validar tipo de archivo
 #     if not file.filename.lower().endswith(".csv"):
@@ -431,6 +455,7 @@ router = APIRouter()
 #             )
 
         
+<<<<<<< HEAD
 #         # Este método debe ser reemplazado con la parte correcta
 #         resultado = {}
 #         # # Llamada a la función del modelo
@@ -441,6 +466,18 @@ router = APIRouter()
 #             batch_size=batch_size,
 #             umbral_degradacion=umbral_degradacion
 #         )
+=======
+        # # Llamada a la función del modelo
+        resultado = retrain_from_csv(
+            csv_content=contents,
+            filename=file.filename,
+            epochs=epochs,
+            batch_size=batch_size,
+            umbral_degradacion=umbral_degradacion,
+            modo=modo,  
+            cargar_a_bd=cargar_a_bd
+        )
+>>>>>>> dcb4b415495740ad8f9d253694b65d84d133b65f
         
         
 
@@ -456,6 +493,7 @@ router = APIRouter()
 #     except HTTPException:
 #         raise
 
+<<<<<<< HEAD
 #     except Exception as e:
 #         raise HTTPException(
 #             status_code=500,
@@ -465,3 +503,84 @@ router = APIRouter()
 @router.post("/chat")
 def health():
     return "Mensaje"
+=======
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error procesando el archivo: {str(e)}"
+        )
+    
+
+
+@router.post(
+    "/retrain/approve/{version}",
+    summary="Aprobar modelo candidato",
+    description="Aplica un modelo candidato en producción"
+)
+async def approve_candidate_model(
+    version: str
+) -> Dict[str, Any]:
+    """
+    Aplica un modelo candidato en producción.
+    
+    **Uso:**
+    1. Ejecutar reentrenamiento en modo manual
+    2. Revisar métricas
+    3. Llamar este endpoint con el version del candidato
+    """
+    try:
+        from model.retrain import retrain_manual_approve
+        
+        resultado = retrain_manual_approve(version)
+        
+        if not resultado.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=resultado.get("message", "Error al aplicar modelo")
+            )
+        
+        return resultado
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al aprobar modelo: {str(e)}"
+        )
+    
+
+
+
+@router.post(
+    "/retrain/reject/{version}",
+    summary="Rechazar modelo candidato",
+    description="Descarta un modelo candidato sin aplicarlo"
+)
+async def reject_candidate_model(
+    version: str
+) -> Dict[str, Any]:
+    """
+    Rechaza y archiva un modelo candidato.
+    """
+    try:
+        from model.retrain import retrain_manual_reject
+        
+        resultado = retrain_manual_reject(version)
+        
+        if not resultado.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=resultado.get("message", "Error al rechazar modelo")
+            )
+        
+        return resultado
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al rechazar modelo: {str(e)}"
+        )
+>>>>>>> dcb4b415495740ad8f9d253694b65d84d133b65f

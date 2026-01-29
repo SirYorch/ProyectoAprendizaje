@@ -26,29 +26,72 @@ SCALER_PATH = FILES_DIR + "scaler.pkl"
 # Cargar datos y modelo al inicio
 df = load_inventory_dataset()
 df = df.sort_values(["product_id", "created_at"])
-# Cargar modelo y scaler con rutas centralizadas
-def _load_model_and_scaler(model_path=MODEL_PATH, scaler_path=SCALER_PATH):
-    m = keras.models.load_model(str(model_path), compile=False)
-    s = joblib.load(str(scaler_path))
-    return m, s
 
 # Variables globales y lock para recarga segura
 _model_lock = threading.Lock()
-model, scaler = _load_model_and_scaler()
+_model_loaded = False
+model = None
+scaler = None
 
+# Cargar modelo y scaler con rutas centralizadas
+def _load_model_and_scaler(model_path=MODEL_PATH, scaler_path=SCALER_PATH):
+    """Carga modelo y scaler con manejo robusto de errores."""
+    try:
+        # Limpiar sesión de TensorFlow antes de cargar
+        keras.backend.clear_session()
+        
+        # Intentar cargar modelo con múltiples métodos
+        m = None
+        
+        # Método 1: Carga estándar
+        try:
+            m = keras.models.load_model(str(model_path), compile=False)
+        except Exception as e1:
+            # Método 2: Con safe_mode=False
+            try:
+                m = keras.models.load_model(str(model_path), compile=False, safe_mode=False)
+            except Exception as e2:
+                # Si ambos fallan, lanzar error descriptivo
+                raise Exception(
+                    f"No se pudo cargar el modelo desde {model_path}. "
+                    f"Error método 1: {str(e1)[:200]}. "
+                    f"Error método 2: {str(e2)[:200]}"
+                )
+        
+        s = joblib.load(str(scaler_path))
+        return m, s
+    
+    except Exception as e:
+        # Limpiar sesión después del error para no contaminar estado
+        try:
+            keras.backend.clear_session()
+        except:
+            pass
+        raise
+
+def _ensure_model_loaded():
+    """Asegura que el modelo esté cargado (lazy loading)."""
+    global model, scaler, _model_loaded
+    if not _model_loaded or model is None or scaler is None:
+        with _model_lock:
+            # Double-check pattern para evitar cargas múltiples
+            if not _model_loaded or model is None or scaler is None:
+                model, scaler = _load_model_and_scaler()
+                _model_loaded = True
+
+# NO cargar al importar - solo cuando se necesite
+# model, scaler = _load_model_and_scaler()  # ← COMENTADO
 
 def reload_model(model_path: Path = MODEL_PATH, scaler_path: Path = SCALER_PATH) -> bool:
-    """Recarga el modelo y el scaler en memoria desde los ficheros dados.
-
-    Retorna True si la recarga fue exitosa, lanza excepción en caso contrario.
-    """
-    global model, scaler
+    """Recarga el modelo y el scaler en memoria desde los ficheros dados."""
+    global model, scaler, _model_loaded
     try:
         with _model_lock:
             print(f"→ Recargando modelo desde {model_path} y scaler desde {scaler_path}")
             m, s = _load_model_and_scaler(model_path, scaler_path)
             model = m
             scaler = s
+            _model_loaded = True
         print("✓ Modelo recargado en memoria")
         return True
     except Exception as e:
@@ -75,6 +118,7 @@ N_STEPS = 7
 
 
 def build_sequence(product_id, target_date):
+    _ensure_model_loaded()  # ← Añadir esto
     df_p = df[df["product_id"] == product_id].copy()
     df_p = df_p.sort_values("created_at")
     
@@ -151,6 +195,7 @@ def get_last_known_data(product_id: str, before_date: datetime) -> pd.DataFrame:
 
 
 def prepare_sequence(df_window: pd.DataFrame) -> np.ndarray:
+    _ensure_model_loaded()  # ← Añadir esto
     """
     Prepara una secuencia para el modelo.
     
@@ -167,6 +212,7 @@ def prepare_sequence(df_window: pd.DataFrame) -> np.ndarray:
 
 
 def inverse_scale_prediction(pred_scaled: float) -> float:
+    _ensure_model_loaded()  # ← Añadir esto
     """
     Desescala una predicción del modelo.
     
@@ -226,6 +272,7 @@ def predict_stock_product_date(
     date: str, 
     use_cache: bool = False   
 ) -> Dict[str, Any]:
+    _ensure_model_loaded()  # ← Añadir esto
     """
     Predice el stock de un producto de forma recursiva, día a día,
     usando siempre ventanas de longitud N_STEPS.
