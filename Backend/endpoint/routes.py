@@ -1,463 +1,467 @@
 from fastapi import APIRouter, Body, UploadFile, File, Query, HTTPException
 
-from typing import Any, Dict
-from model.retrain import retrain_from_csv
-from llm.llm import naturalize_response
-from datetime import date , timedelta
-from tts.textToSpeech import tts
-import base64
-import os
-import json
-from lipsync.lipsyncgen import generate_lipsync
-from ai.matcher import FunctionCaller
-from db.functions import generate_csv , generate_excel, top_selling, least_selling
-from llm.agent import check_regex_response
-from model.methods import predict_stock_product_date
-from db.models import listar_productos
+# from typing import Any, Dict
+# from model.retrain import retrain_from_csv
+# from llm.llm import naturalize_response
+# from datetime import date , timedelta
+# from tts.textToSpeech import tts
+# import base64
+# import os
+# import json
+# from lipsync.lipsyncgen import generate_lipsync
+# from ai.matcher import FunctionCaller
+# from db.functions import generate_csv , generate_excel, top_selling, least_selling
+# from llm.agent import check_regex_response
+# from model.methods import predict_stock_product_date
+# from db.models import listar_productos
 
 router = APIRouter()
-caller = FunctionCaller()
+# caller = FunctionCaller()
 
-#Funciones auxiliares de transformacion
-# --- Funciones auxiliares ---
-def audio_to_base64(path):
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
+# #Funciones auxiliares de transformacion
+# # --- Funciones auxiliares ---
+# def audio_to_base64(path):
+#     with open(path, "rb") as f:
+#         return base64.b64encode(f.read()).decode("utf-8")
 
-def read_json(path):
-    with open(path, "r") as f:
-        return json.load(f)
+# def read_json(path):
+#     with open(path, "r") as f:
+#         return json.load(f)
     
-def file_to_base64(file_path):
-    """
-    Convierte un archivo a base64 para enviarlo en el JSON.
-    """
-    try:
-        with open(file_path, 'rb') as f:
-            return base64.b64encode(f.read()).decode('utf-8')
-    except Exception as e:
-        print(f"Error al convertir archivo a base64: {e}")
-        return None
+# def file_to_base64(file_path):
+#     """
+#     Convierte un archivo a base64 para enviarlo en el JSON.
+#     """
+#     try:
+#         with open(file_path, 'rb') as f:
+#             return base64.b64encode(f.read()).decode('utf-8')
+#     except Exception as e:
+#         print(f"Error al convertir archivo a base64: {e}")
+#         return None
 
     
     
 
-#Todas las solicitudes deben mantener el retorno de un msg
-#Todas las solicitudes reciben un valor llm true or false, para saber si la respuesta se naturaliza o no
+# #Todas las solicitudes deben mantener el retorno de un msg
+# #Todas las solicitudes reciben un valor llm true or false, para saber si la respuesta se naturaliza o no
 
 
 
-@router.post(
-    "/predict/product-date",
-    summary="Predecir stock de producto específico en una fecha específica",
-    description="Predice el stock de un producto en una fecha determinada"
-)
-async def predict_product_fecha(request: Dict[str, Any] = Body(...)):
-    """
-    Predice el stock de un producto específico en una fecha.
-    """
-    print("prediccion con producto y fecha")
-    product = request.get("name")
-    date = request.get("date")
+# @router.post(
+#     "/predict/product-date",
+#     summary="Predecir stock de producto específico en una fecha específica",
+#     description="Predice el stock de un producto en una fecha determinada"
+# )
+# async def predict_product_fecha(request: Dict[str, Any] = Body(...)):
+#     """
+#     Predice el stock de un producto específico en una fecha.
+#     """
+#     print("prediccion con producto y fecha")
+#     product = request.get("name")
+#     date = request.get("date")
 
-    if not product or not date:
-        return "Faltan campos obligatorios: name o date"
+#     if not product or not date:
+#         return "Faltan campos obligatorios: name o date"
         
         
-    llm = request.get("llm")
+#     llm = request.get("llm")
     
-    pred = predict_stock_product_date(
-        product_id=product,
-        date=date)
+#     pred = predict_stock_product_date(
+#         product_id=product,
+#         date=date)
     
-    if(llm):
-        pred = naturalize_response("Se envió una solicitud en donde se intenta predecir el stock de un producto específico en una fecha los datos son los siguientes"+str(pred))
+#     if(llm):
+#         pred = naturalize_response("Se envió una solicitud en donde se intenta predecir el stock de un producto específico en una fecha los datos son los siguientes"+str(pred))
     
-    return pred
+#     return pred
 
 
 
-@router.post(
-    "/predict/product",
-    summary="Predecir stock de producto en el tiempo hasta que se agote.",
-    description="Predice el stock de un producto hasta que se agote"
-)
-async def predict_product(request: Dict[str, Any] = Body(...)):
-    """
-    Predice el stock de un producto específico hasta que se acabe
-    """
-    print("prediccion con producto")
-    product = request.get("name")
+# @router.post(
+#     "/predict/product",
+#     summary="Predecir stock de producto en el tiempo hasta que se agote.",
+#     description="Predice el stock de un producto hasta que se agote"
+# )
+# async def predict_product(request: Dict[str, Any] = Body(...)):
+#     """
+#     Predice el stock de un producto específico hasta que se acabe
+#     """
+#     print("prediccion con producto")
+#     product = request.get("name")
 
-    if not product:
-        return "Faltan campos obligatorios: name"
+#     if not product:
+#         return "Faltan campos obligatorios: name"
         
-    day = date.today()
+#     day = date.today()
 
-    result = []
-    # Buscar hasta 365 días hacia adelante
-    for i in range (30):
-        day = day+timedelta(days=1)
-        pred = predict_stock_product_date(
-            product_id=product,
-            date=day
-        )
+#     result = []
+#     # Buscar hasta 365 días hacia adelante
+#     for i in range (30):
+#         day = day+timedelta(days=1)
+#         pred = predict_stock_product_date(
+#             product_id=product,
+#             date=day
+#         )
 
-        result.append(
-            {
+#         result.append(
+#             {
                       
-                "product_name": product,
-                "predicted_stock": int(pred["predicted_stock"]),
-                "date": day
+#                 "product_name": product,
+#                 "predicted_stock": int(pred["predicted_stock"]),
+#                 "date": day
                 
-        }
-        )
-        print({
+#         }
+#         )
+#         print({
                       
-            "product_name": product,
-            "predicted_stock": int(pred["predicted_stock"]),
-            "date": day
+#             "product_name": product,
+#             "predicted_stock": int(pred["predicted_stock"]),
+#             "date": day
             
-        })
-        if pred["predicted_stock"] <= 0:
-            break
+#         })
+#         if pred["predicted_stock"] <= 0:
+#             break
     
     
-    pred = result
+#     pred = result
     
-    llm = request.get("llm")
+#     llm = request.get("llm")
     
-    if(llm):
-        pred = naturalize_response("Se envió una solicitud en donde se intenta predecir stock de producto en el tiempo hasta que se agote los datos son los siguientes"+str(pred))
-    return pred
+#     if(llm):
+#         pred = naturalize_response("Se envió una solicitud en donde se intenta predecir stock de producto en el tiempo hasta que se agote los datos son los siguientes"+str(pred))
+#     return pred
 
 
-@router.post(
-    "/predict/date",
-    summary="Predecir stock de todos los productos hasta que alguno se agote totalmente",
-    description="Predice el stock de todos los productos hasta que alguno se agote totalmente"
-)
-async def predict_date(request: Dict[str, Any] = Body(...)):
-    """
-    Predice el stock de todos los productos específico hasta que se acabe
-    """
-    print("prediccion con fecha")
-    PRODUCTS = listar_productos()
-    date = request.get("date")
+# @router.post(
+#     "/predict/date",
+#     summary="Predecir stock de todos los productos hasta que alguno se agote totalmente",
+#     description="Predice el stock de todos los productos hasta que alguno se agote totalmente"
+# )
+# async def predict_date(request: Dict[str, Any] = Body(...)):
+#     """
+#     Predice el stock de todos los productos específico hasta que se acabe
+#     """
+#     print("prediccion con fecha")
+#     PRODUCTS = listar_productos()
+#     date = request.get("date")
 
-    if not date:
-        return  "Faltan campos obligatorios: date"
+#     if not date:
+#         return  "Faltan campos obligatorios: date"
         
         
-    results = []
+#     results = []
 
-    for product in PRODUCTS:
-        predi = predict_stock_product_date(
-            product_id=product,
-            date=date
-        )
+#     for product in PRODUCTS:
+#         predi = predict_stock_product_date(
+#             product_id=product,
+#             date=date
+#         )
 
-        results.append({
-            "product_name": product,
-            "predicted_stock": int(predi["predicted_stock"]),
-            "date":date
-        })
-        print({
-            "product_name": product,
-            "predicted_stock": int(predi["predicted_stock"]),
-            "date":date
-        })
+#         results.append({
+#             "product_name": product,
+#             "predicted_stock": int(predi["predicted_stock"]),
+#             "date":date
+#         })
+#         print({
+#             "product_name": product,
+#             "predicted_stock": int(predi["predicted_stock"]),
+#             "date":date
+#         })
     
-    pred = results
+#     pred = results
     
-    llm = request.get("llm")
+#     llm = request.get("llm")
     
-    if(llm):
-        pred = naturalize_response("Se envió una solicitud en donde se intenta predecir stock de todos los productos en cierta fecha los datos son los siguientes"+str(pred))
+#     if(llm):
+#         pred = naturalize_response("Se envió una solicitud en donde se intenta predecir stock de todos los productos en cierta fecha los datos son los siguientes"+str(pred))
         
-    return pred
+#     return pred
 
-@router.post(
-    "/predict/all",
-    summary="Predecir stock de todos los productos hasta que alguno se agote",
-    description="Predice el stock de todos los productos hasta que alguno se agote"
-)
-async def predict_stock(request: Dict[str, Any] = Body(...)):
-    """
-    Predice el stock de un producto específico hasta que se acabe
-    """
-    print("prediccion sin argumentos")
+# @router.post(
+#     "/predict/all",
+#     summary="Predecir stock de todos los productos hasta que alguno se agote",
+#     description="Predice el stock de todos los productos hasta que alguno se agote"
+# )
+# async def predict_stock(request: Dict[str, Any] = Body(...)):
+#     """
+#     Predice el stock de un producto específico hasta que se acabe
+#     """
+#     print("prediccion sin argumentos")
     
-    PRODUCTS = listar_productos()
+#     PRODUCTS = listar_productos()
     
-    pred = "" ## mensaje de respuesta
+#     pred = "" ## mensaje de respuesta
     
-    day = date.today()
-    results = []
+#     day = date.today()
+#     results = []
     
     
-    for i in range (30):
-        zero = False
-        for product in PRODUCTS:
-            pred = predict_stock_product_date(
-                product_id=product,
-                date=day)
-            day = day+ timedelta(days=1)
+#     for i in range (30):
+#         zero = False
+#         for product in PRODUCTS:
+#             pred = predict_stock_product_date(
+#                 product_id=product,
+#                 date=day)
+#             day = day+ timedelta(days=1)
             
-            results.append({
-                    "product_name": product,
-                    "predicted_stock": int(pred["predicted_stock"]),
-                    "current_stock": pred["current_stock"],
-                })
-            print(str({
-                    "product_name": product,
-                    "predicted_stock": int(pred["predicted_stock"]),
-                    "current_stock": pred["current_stock"],
-                }))
-            if(int(pred["predicted_stock"]) <= 0):
-                zero = True
+#             results.append({
+#                     "product_name": product,
+#                     "predicted_stock": int(pred["predicted_stock"]),
+#                     "current_stock": pred["current_stock"],
+#                 })
+#             print(str({
+#                     "product_name": product,
+#                     "predicted_stock": int(pred["predicted_stock"]),
+#                     "current_stock": pred["current_stock"],
+#                 }))
+#             if(int(pred["predicted_stock"]) <= 0):
+#                 zero = True
             
-        if zero == True:
-            break
+#         if zero == True:
+#             break
         
-    pred = results
+#     pred = results
     
-    llm = request.get("llm")
+#     llm = request.get("llm")
     
-    if(llm):
-        pred = naturalize_response("Se envió una solicitud en donde se intenta predecir stock de todos los productos hasta que alguno se agote los datos son los siguientes"+str(pred))
+#     if(llm):
+#         pred = naturalize_response("Se envió una solicitud en donde se intenta predecir stock de todos los productos hasta que alguno se agote los datos son los siguientes"+str(pred))
     
-    return pred
+#     return pred
 
 
 
-# sin argumentos
-# UPDATE function_definitions
-# SET nombre = 'predict_stock'
-# WHERE id = 'func_001';
+# # sin argumentos
+# # UPDATE function_definitions
+# # SET nombre = 'predict_stock'
+# # WHERE id = 'func_001';
 
-# # con producto
-# UPDATE function_definitions
-# SET nombre = 'predict_product'
-# WHERE id = 'func_002';
-
-
-# # con fecha
-# UPDATE function_definitions
-# SET nombre = 'predict_date'
-# WHERE id = 'func_003';
-
-# # con fecha y producto
-# UPDATE function_definitions
-# SET nombre = 'predict_product_fecha'
-# WHERE id = 'func_004';
+# # # con producto
+# # UPDATE function_definitions
+# # SET nombre = 'predict_product'
+# # WHERE id = 'func_002';
 
 
-# # get best sellers
-# UPDATE function_definitions
-# SET nombre = 'top_selling'
-# WHERE id = 'func_005';
+# # # con fecha
+# # UPDATE function_definitions
+# # SET nombre = 'predict_date'
+# # WHERE id = 'func_003';
 
-# # get worst Sellers
-# UPDATE function_definitions
-# SET nombre = 'least_selling'
-# WHERE id = 'func_006';
-
-
-# # generate csv
-# UPDATE function_definitions
-# SET nombre = 'generate_csv'
-# WHERE id = 'func_007';
-
-# # generate excel
-# UPDATE function_definitions
-# SET nombre = 'generate_excel'
-# WHERE id = 'func_008';
+# # # con fecha y producto
+# # UPDATE function_definitions
+# # SET nombre = 'predict_product_fecha'
+# # WHERE id = 'func_004';
 
 
+# # # get best sellers
+# # UPDATE function_definitions
+# # SET nombre = 'top_selling'
+# # WHERE id = 'func_005';
 
-@router.post(
-    "/chat",
-    summary="Envía mensajes directamente al chat, para que este procese la información, y sean presentadas utilizando un agente avatar con inteligencia artificial",
-    description="Envía y procesa imagenes con un avatar e inteligencia artificial"
-)
-async def chat(request: Dict[str, Any] = Body(...)):
-    """
-    Recibe la información en forma de query, la procesa, y la presenta a los usuarios naturalizados.
-    """
+# # # get worst Sellers
+# # UPDATE function_definitions
+# # SET nombre = 'least_selling'
+# # WHERE id = 'func_006';
+
+
+# # # generate csv
+# # UPDATE function_definitions
+# # SET nombre = 'generate_csv'
+# # WHERE id = 'func_007';
+
+# # # generate excel
+# # UPDATE function_definitions
+# # SET nombre = 'generate_excel'
+# # WHERE id = 'func_008';
+
+
+
+# @router.post(
+#     "/chat",
+#     summary="Envía mensajes directamente al chat, para que este procese la información, y sean presentadas utilizando un agente avatar con inteligencia artificial",
+#     description="Envía y procesa imagenes con un avatar e inteligencia artificial"
+# )
+# async def chat(request: Dict[str, Any] = Body(...)):
+#     """
+#     Recibe la información en forma de query, la procesa, y la presenta a los usuarios naturalizados.
+#     """
     
-    query = request.get("message")
-    print("chat request")
+#     query = request.get("message")
+#     print("chat request")
 
-    pred = "Se Envió la solicitud " + query
-    file_data = None  # Cambiado de 'file' a 'file_data' para mayor claridad
-    file_name = None
-    file_type = None
+#     pred = "Se Envió la solicitud " + query
+#     file_data = None  # Cambiado de 'file' a 'file_data' para mayor claridad
+#     file_name = None
+#     file_type = None
     
-    # Primer filtro: expresiones regulares
-    regex_resp = check_regex_response(query)
+#     # Primer filtro: expresiones regulares
+#     regex_resp = check_regex_response(query)
     
-    if regex_resp:
-        print(" Respondido por Regex")
-        pred = regex_resp
-    else:
-        # Segundo filtro: RAG
-        faq_resp = caller.consultar_faq(query)
+#     if regex_resp:
+#         print(" Respondido por Regex")
+#         pred = regex_resp
+#     else:
+#         # Segundo filtro: RAG
+#         faq_resp = caller.consultar_faq(query)
 
-        if faq_resp:
-            print(f" Respondido por RAG (Confianza: {faq_resp['confianza']:.2f})")
-            pred = faq_resp['respuesta'] 
-        else:
-            # Tercer filtro: function matcher
-            resultado = caller.identificar_funcion(query)
+#         if faq_resp:
+#             print(f" Respondido por RAG (Confianza: {faq_resp['confianza']:.2f})")
+#             pred = faq_resp['respuesta'] 
+#         else:
+#             # Tercer filtro: function matcher
+#             resultado = caller.identificar_funcion(query)
             
-            if resultado['confianza'] > 0.8:
-                pred = "La función con mayor probabilidad es " + resultado['funcion'] + " los resultados de la función son: "
-                print("Funcion: " + resultado['funcion'])
-                print("Confianza: " + str(resultado['confianza']))
+#             if resultado['confianza'] > 0.8:
+#                 pred = "La función con mayor probabilidad es " + resultado['funcion'] + " los resultados de la función son: "
+#                 print("Funcion: " + resultado['funcion'])
+#                 print("Confianza: " + str(resultado['confianza']))
                 
-                if str(resultado['funcion']) == "predict_stock":
-                    pred += str(await predict_stock())
+#                 if str(resultado['funcion']) == "predict_stock":
+#                     pred += str(await predict_stock())
                     
-                elif str(resultado['funcion']) == "predict_product":
-                    pred += str(await predict_product({"name": resultado['parametros']['producto']}))
+#                 elif str(resultado['funcion']) == "predict_product":
+#                     pred += str(await predict_product({"name": resultado['parametros']['producto']}))
                     
-                elif str(resultado['funcion']) == "predict_date":
-                    data = await predict_date({"date": resultado['parametros']['fecha']})
-                    print(data)
-                    pred += str(data)
+#                 elif str(resultado['funcion']) == "predict_date":
+#                     data = await predict_date({"date": resultado['parametros']['fecha']})
+#                     print(data)
+#                     pred += str(data)
                     
-                elif str(resultado['funcion']) == "predict_product_fecha":
-                    pred += str(await predict_product_fecha({
-                        "name": resultado['parametros']['producto'],
-                        "date": resultado['parametros']['fecha']
-                    }))
+#                 elif str(resultado['funcion']) == "predict_product_fecha":
+#                     pred += str(await predict_product_fecha({
+#                         "name": resultado['parametros']['producto'],
+#                         "date": resultado['parametros']['fecha']
+#                     }))
                     
-                elif str(resultado['funcion']) == "top_selling":
-                    data = await top_selling()
-                    pred += f"Los 5 productos más vendidos son: {str(data)}"
+#                 elif str(resultado['funcion']) == "top_selling":
+#                     data = await top_selling()
+#                     pred += f"Los 5 productos más vendidos son: {str(data)}"
 
-                elif str(resultado['funcion']) == "least_selling":
-                    data = await least_selling()
-                    print(data)
-                    pred += f"Los 5 productos menos vendidos son: {str(data)}"
+#                 elif str(resultado['funcion']) == "least_selling":
+#                     data = await least_selling()
+#                     print(data)
+#                     pred += f"Los 5 productos menos vendidos son: {str(data)}"
 
-                elif str(resultado['funcion']) == "generate_csv":
-                    month = resultado["parametros"].get("mes")
-                    file_path = generate_csv(month)
+#                 elif str(resultado['funcion']) == "generate_csv":
+#                     month = resultado["parametros"].get("mes")
+#                     file_path = generate_csv(month)
                     
-                    if file_path and os.path.exists(file_path):
-                        file_data = file_to_base64(file_path)
-                        file_name = os.path.basename(file_path)
-                        file_type = "text/csv"
-                        pred = f"Se generó el reporte CSV exitosamente: {file_name}"
-                    else:
-                        pred = "Error al generar el archivo CSV"
+#                     if file_path and os.path.exists(file_path):
+#                         file_data = file_to_base64(file_path)
+#                         file_name = os.path.basename(file_path)
+#                         file_type = "text/csv"
+#                         pred = f"Se generó el reporte CSV exitosamente: {file_name}"
+#                     else:
+#                         pred = "Error al generar el archivo CSV"
 
-                elif str(resultado['funcion']) == "generate_excel":
-                    month = resultado["parametros"].get("mes")
-                    file_path = generate_excel(month)
+#                 elif str(resultado['funcion']) == "generate_excel":
+#                     month = resultado["parametros"].get("mes")
+#                     file_path = generate_excel(month)
                     
-                    if file_path and os.path.exists(file_path):
-                        file_data = file_to_base64(file_path)
-                        file_name = os.path.basename(file_path)
-                        file_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        pred = f"Se generó el reporte Excel exitosamente: {file_name}"
-                    else:
-                        pred = "Error al generar el archivo Excel"
-            else:
-                pred = "Lamentablemente no logré entender la solicitud. Recuerda que puedo hacer predicciones tomando parámetros como producto y fecha, revisar productos más y menos vendidos, además de generar reportes en Excel o CSV."
+#                     if file_path and os.path.exists(file_path):
+#                         file_data = file_to_base64(file_path)
+#                         file_name = os.path.basename(file_path)
+#                         file_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+#                         pred = f"Se generó el reporte Excel exitosamente: {file_name}"
+#                     else:
+#                         pred = "Error al generar el archivo Excel"
+#             else:
+#                 pred = "Lamentablemente no logré entender la solicitud. Recuerda que puedo hacer predicciones tomando parámetros como producto y fecha, revisar productos más y menos vendidos, además de generar reportes en Excel o CSV."
 
-        # Naturalizar respuesta
-        pred = naturalize_response(pred)
+#         # Naturalizar respuesta
+#         pred = naturalize_response(pred)
     
-    # Audio generado por gTTS
-    tts(pred)
+#     # Audio generado por gTTS
+#     tts(pred)
     
-    # Json generado por rhubarb
-    generate_lipsync(pred)
+#     # Json generado por rhubarb
+#     generate_lipsync(pred)
     
-    # Construir respuesta
-    response_data = {
-        "text": pred,
-        "audio": audio_to_base64("audios/audio.wav"),
-        "lipsync": read_json("audios/audio.json"),
-        "facialExpression": "smile",
-        "animation": "Standing"
-    }
+#     # Construir respuesta
+#     response_data = {
+#         "text": pred,
+#         "audio": audio_to_base64("audios/audio.wav"),
+#         "lipsync": read_json("audios/audio.json"),
+#         "facialExpression": "smile",
+#         "animation": "Standing"
+#     }
     
-    # Agregar archivo solo si existe
-    if file_data:
-        response_data["file"] = {
-            "data": file_data,
-            "name": file_name,
-            "type": file_type
-        }
+#     # Agregar archivo solo si existe
+#     if file_data:
+#         response_data["file"] = {
+#             "data": file_data,
+#             "name": file_name,
+#             "type": file_type
+#         }
     
-    return {"messages": [response_data]}
+#     return {"messages": [response_data]}
 
 
 
-@router.post(
-    "/upload/retrain",
-    summary="Cargar CSV y reentrenar modelo",
-    description="Sube un archivo CSV con datos nuevos para reentrenar el modelo"
-)
-async def upload_and_retrain(
-    file: UploadFile = File(..., description="Archivo CSV con datos de entrenamiento"),
-    epochs: int = Query(5, description="Número de épocas para reentrenamiento", ge=1, le=100),
-    batch_size: int = Query(128, description="Tamaño del batch", ge=16, le=512),
-    umbral_degradacion: float = Query(0.1, description="Porcentaje de degradación aceptable", ge=0.0, le=1.0)
-) -> Dict[str, Any]:
-    """
-    Recibe un archivo CSV, lo procesa y reentrena el modelo.
-    """
+# @router.post(
+#     "/upload/retrain",
+#     summary="Cargar CSV y reentrenar modelo",
+#     description="Sube un archivo CSV con datos nuevos para reentrenar el modelo"
+# )
+# async def upload_and_retrain(
+#     file: UploadFile = File(..., description="Archivo CSV con datos de entrenamiento"),
+#     epochs: int = Query(5, description="Número de épocas para reentrenamiento", ge=1, le=100),
+#     batch_size: int = Query(128, description="Tamaño del batch", ge=16, le=512),
+#     umbral_degradacion: float = Query(0.1, description="Porcentaje de degradación aceptable", ge=0.0, le=1.0)
+# ) -> Dict[str, Any]:
+#     """
+#     Recibe un archivo CSV, lo procesa y reentrena el modelo.
+#     """
 
-    # Validar tipo de archivo
-    if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(
-            status_code=400,
-            detail="El archivo debe ser un CSV (.csv)"
-        )
+#     # Validar tipo de archivo
+#     if not file.filename.lower().endswith(".csv"):
+#         raise HTTPException(
+#             status_code=400,
+#             detail="El archivo debe ser un CSV (.csv)"
+#         )
 
-    try:
-        # Leer contenido
-        contents = await file.read()
+#     try:
+#         # Leer contenido
+#         contents = await file.read()
 
-        if not contents or len(contents) == 0:
-            raise HTTPException(
-                status_code=400,
-                detail="El archivo CSV está vacío"
-            )
+#         if not contents or len(contents) == 0:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail="El archivo CSV está vacío"
+#             )
 
         
-        # Este método debe ser reemplazado con la parte correcta
-        resultado = {}
-        # # Llamada a la función del modelo
-        resultado = retrain_from_csv(
-            csv_content=contents,
-            filename=file.filename,
-            epochs=epochs,
-            batch_size=batch_size,
-            umbral_degradacion=umbral_degradacion
-        )
+#         # Este método debe ser reemplazado con la parte correcta
+#         resultado = {}
+#         # # Llamada a la función del modelo
+#         resultado = retrain_from_csv(
+#             csv_content=contents,
+#             filename=file.filename,
+#             epochs=epochs,
+#             batch_size=batch_size,
+#             umbral_degradacion=umbral_degradacion
+#         )
         
         
 
-        # Validación del resultado
-        if not isinstance(resultado, dict) or not resultado.get("success"):
-            raise HTTPException(
-                status_code=500,
-                detail=resultado.get("message", "Error en el reentrenamiento")
-            )
+#         # Validación del resultado
+#         if not isinstance(resultado, dict) or not resultado.get("success"):
+#             raise HTTPException(
+#                 status_code=500,
+#                 detail=resultado.get("message", "Error en el reentrenamiento")
+#             )
 
-        return resultado
+#         return resultado
 
-    except HTTPException:
-        raise
+#     except HTTPException:
+#         raise
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error procesando el archivo: {str(e)}"
-        )
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=500,
+#             detail=f"Error procesando el archivo: {str(e)}"
+#         )
+        
+@router.post("/chat")
+def health():
+    return "Mensaje"

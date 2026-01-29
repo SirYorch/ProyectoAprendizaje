@@ -26,7 +26,10 @@ Este proyecto fue hecho con una base de datos de vectores de postgresql, para su
 **Backend**
 ejecutar
 docker compose
-Backend/au/functionMatcher/Initializer.py
+Backend/ai/functionMatcher/Initializer.py  **Para inicializar el matcher de funciones**
+Backend/db/models.py **Para inicializar las tables de faqs**
+Backend/db/Tables.py **Para rellenar las tablas**  se puede hacer nuevamente el models.py
+Generar y colocar el api de google `GOOGLE_GEMINI_API_KEY={api_key}`
 main.py para la aplicación
 **Frontend**
 cd Frontend

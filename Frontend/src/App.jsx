@@ -1,25 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Navbar } from "./components/navbar";
-import { Home } from "./pages/home";
 import { Llm } from "./pages/llm";
-import { Requests } from "./pages/requests";
-import { Leva } from "leva";
-
 function App() {
   return (
     <>
       {/* <Loader /> */}
-      <Leva hidden/>
       <BrowserRouter>
 
-        <Navbar />
-
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/sobre" element={<Home />} />
-          {/* luego crearás las otras */}
-          <Route path="/llm" element={<Llm />} />
-          <Route path="/metodos" element={<Requests/>} />
+          <Route path="/" element={<Llm />} />
         </Routes>
       </BrowserRouter>
 {/* 
