@@ -80,17 +80,6 @@ export function Llm() {
   }, [transcript, listening]);
 
   const handleAutoSend = (finalText) => {
-    // Calling internal function (we need to mirror sending logic but with specific text)
-    // We can't easily call sending logic because state might be stale in closure
-    // But since we pass `finalText`, we can just dispatch.
-    // However, we need to respect other state (files, etc which are not implemented yet).
-    // For now we just call update state and trigger send. 
-    // Actually, calling `enviarMensaje` directly might use stale `texto` state if we are not careful.
-    // But `texto` is updated in the effect just before.
-
-    // Better approach: Since we are in an effect dependent on transcript, `enviarMensaje` needs access to current stuff.
-    // Let's create a helper that takes arguments.
-
     const nuevoMensaje = {
       remitente: "me",
       texto: finalText,
@@ -98,13 +87,10 @@ export function Llm() {
 
     setMensajes((prev) => [...prev, nuevoMensaje]);
     // Send logic
-    chat(finalText, imgSrc); // Use current imgSrc state (closure might capture old value?)
-    // Actually `imgSrc` might be stale here if changed recently? usually fine.
+    chat(finalText, imgSrc);
 
     setTexto("");
     resetTranscript();
-    // setImgSrc(null); // Should we clear image on auto send? Probably yes.
-    // But let's verify if user wants that. For now, yes.
   };
 
 
@@ -238,42 +224,46 @@ export function Llm() {
   };
 
   return (
-    <div className="h-[calc(90vh-8px)] overflow-hidden bg-[#f5f6f8]">
+    <div className="h-screen md:h-[calc(90vh-8px)] overflow-hidden bg-[#f5f6f8] flex flex-col">
 
       {/* Línea superior */}
-      <div className="border-b-8 border-[#ffb703] w-full"></div>
+      <div className="border-b-4 md:border-b-8 border-[#ffb703] w-full shrink-0"></div>
 
       {/* CONTENEDOR PRINCIPAL */}
-      <div className="flex flex-row w-full h-[calc(80vh-8px)]">
+      <div className="flex flex-col md:flex-row w-full flex-1 overflow-hidden">
 
         {/* ============================
-            COLUMNA IZQUIERDA: CHAT (50%)
+            COLUMNA IZQUIERDA: CHAT (Full Width on Mobile)
         ============================ */}
-        <div className="w-full flex flex-col items-center px-6 pt-6 text-[#0f2c63]">
+        <div className="w-full h-full flex flex-col items-center px-2 pt-2 md:px-6 md:pt-6 text-[#0f2c63]">
 
-          <div className="text-3xl font-semibold mb-4">
+          <div className="hidden md:block text-2xl md:text-3xl font-semibold mb-3 md:mb-4 text-center">
             Hola, ¿en qué puedo ayudarte?
+          </div>
+          {/* Mobile Header - Compact */}
+          <div className="md:hidden w-full text-center py-2 font-bold text-sm text-[#0f2c63]">
+            Asistente Virtual
           </div>
 
           {/* Caja de mensajes */}
-          <div className="w-full md:w-11/12 lg:w-10/12 flex-1 overflow-y-auto px-4 py-6 bg-white rounded-2xl shadow-md border border-[#0f2c63]/20 mb-4">
+          <div className="w-full md:w-11/12 lg:w-10/12 flex-1 overflow-y-auto px-2 py-2 md:px-4 md:py-6 bg-white rounded-lg md:rounded-2xl shadow-sm md:shadow-md border border-[#0f2c63]/20 mb-2 md:mb-4 scroll-smooth">
 
             {mensajes.map((m, i) => (
-              <div key={i} className="mb-4 w-full">
+              <div key={i} className="mb-2 md:mb-4 w-full">
 
                 {m.remitente === "me" && (
-                  <div className="flex justify-end mb-2">
-                    <div className="flex flex-col items-end max-w-[75%]">
+                  <div className="flex justify-end mb-1 md:mb-2">
+                    <div className="flex flex-col items-end max-w-[85%] md:max-w-[75%]">
                       {m.imagen && (
                         <img
                           src={m.imagen}
                           alt="User upload"
-                          className="max-w-full h-auto rounded-lg mb-2 border border-[#0f2c63]/20"
-                          style={{ maxHeight: '200px' }}
+                          className="max-w-full h-auto rounded-lg mb-1 md:mb-2 border border-[#0f2c63]/20"
+                          style={{ maxHeight: '120px', objectFit: 'contain' }}
                         />
                       )}
                       {m.texto && (
-                        <div className="bg-[#0f2c63] text-white px-4 py-2 rounded-3xl">
+                        <div className="bg-[#0f2c63] text-white px-3 py-1.5 md:px-4 md:py-2 rounded-2xl md:rounded-3xl text-xs md:text-base break-words">
                           {m.texto}
                         </div>
                       )}
@@ -283,16 +273,16 @@ export function Llm() {
 
                 {m.remitente === "CHAT" && (
                   <div className="flex justify-start">
-                    <div className="bg-[#ffb703] text-[#0f2c63] px-4 py-2 rounded-3xl max-w-[75%]">
+                    <div className="bg-[#ffb703] text-[#0f2c63] px-3 py-1.5 md:px-4 md:py-2 rounded-2xl md:rounded-3xl max-w-[85%] md:max-w-[75%] text-xs md:text-base break-words">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                         {m.texto}
                       </ReactMarkdown>
 
                       {/* Indicador de archivo descargado */}
                       {m.archivo && (
-                        <div className="mt-2 flex items-center gap-2 text-sm bg-white/30 rounded-lg px-3 py-2">
+                        <div className="mt-2 flex items-center gap-2 text-xs bg-white/30 rounded-lg px-2 py-1 md:px-3 md:py-2">
                           <svg
-                            className="w-4 h-4"
+                            className="w-3 h-3 md:w-4 md:h-4"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -304,7 +294,7 @@ export function Llm() {
                               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                             />
                           </svg>
-                          <span>✓ Archivo descargado: {m.archivo.name}</span>
+                          <span className="truncate max-w-[120px] md:max-w-xs">✓ {m.archivo.name}</span>
                         </div>
                       )}
                     </div>
@@ -315,94 +305,94 @@ export function Llm() {
             ))}
 
             {loading && (
-              <div className="text-center mt-4 text-[#0f2c63] animate-pulse">
+              <div className="text-center mt-2 md:mt-4 text-[#0f2c63] animate-pulse text-xs md:text-sm">
                 Pensando...
               </div>
             )}
 
             {error && (
-              <div className="text-center text-red-500 mt-4">
+              <div className="text-center text-red-500 mt-2 md:mt-4 text-xs md:text-sm">
                 {error}
               </div>
             )}
 
           </div>
 
-          {/* Input + Botón */}
-          <div className="flex flex-col w-full md:w-11/12 lg:w-10/12 pb-4 gap-2">
+          {/* Input + Botón - Compact container */}
+          <div className="flex flex-col w-full md:w-11/12 lg:w-10/12 pb-2 md:pb-4 gap-2 shrink-0">
 
             {/* Image Preview */}
             {imgSrc && (
-              <div className="relative w-fit">
-                <img src={imgSrc} alt="Preview" className="h-20 rounded-lg border border-[#0f2c63]/20" />
+              <div className="relative w-fit mx-auto md:mx-0">
+                <img src={imgSrc} alt="Preview" className="h-12 md:h-20 rounded-lg border border-[#0f2c63]/20" />
                 <button
                   onClick={() => setImgSrc(null)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                 >
-                  <X size={12} />
+                  <X size={10} className="md:w-3 md:h-3" />
                 </button>
               </div>
             )}
 
-            <div className="flex w-full gap-4">
+            <div className="flex w-full gap-1.5 md:gap-2 items-center">
               <input
                 type="text"
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Escribe tu consulta…"
-                className="flex-1 border-2 border-[#0f2c63] rounded-full px-6 py-3 text-xl outline-none"
+                placeholder="Escribe..."
+                className="flex-1 border border-[#0f2c63] rounded-full px-3 py-1.5 md:px-6 md:py-3 text-xs md:text-base lg:text-xl outline-none min-w-0"
                 disabled={loading}
               />
 
-              {/* Mic Button */}
+              {/* Mic Button - Smaller on mobile */}
               <button
                 onClick={toggleMic}
-                className={`p-3 rounded-full transition-colors ${listening ? "bg-red-500 text-white animate-pulse" : "bg-gray-200 text-[#0f2c63] hover:bg-gray-300"
+                className={`p-1.5 md:p-3 rounded-full transition-colors shrink-0 ${listening ? "bg-red-500 text-white animate-pulse" : "bg-gray-200 text-[#0f2c63] hover:bg-gray-300"
                   }`}
-                title="Dictar por voz"
+                title="Dictar"
               >
-                <Mic size={24} />
+                <Mic size={16} className="md:w-6 md:h-6" />
               </button>
 
-              {/* Camera Button */}
+              {/* Camera Button - Smaller on mobile */}
               <button
                 onClick={() => setCameraOpen(true)}
-                className="p-3 rounded-full bg-gray-200 text-[#0f2c63] hover:bg-gray-300 transition-colors"
-                title="Tomar foto / Subir imagen"
+                className="p-1.5 md:p-3 rounded-full bg-gray-200 text-[#0f2c63] hover:bg-gray-300 transition-colors shrink-0"
+                title="Cámara"
               >
-                <Camera size={24} />
+                <Camera size={16} className="md:w-6 md:h-6" />
               </button>
 
               <button
                 onClick={enviarMensaje}
                 disabled={loading}
-                className="bg-[#0f2c63] text-white px-6 py-3 rounded-full text-xl hover:bg-[#0d2452] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#0f2c63] text-white px-3 py-1.5 md:px-6 md:py-3 rounded-full text-xs md:text-base lg:text-xl hover:bg-[#0d2452] transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               >
                 Enviar
               </button>
             </div>
           </div>
 
-          {/* Camera Modal */}
+          {/* Camera Modal - Fullscreen on mobile */}
           {cameraOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-              <div className="bg-white p-4 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col gap-4 relative">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 md:p-4">
+              <div className="bg-white p-3 md:p-4 rounded-xl md:rounded-2xl shadow-2xl w-full max-w-sm md:max-w-2xl flex flex-col gap-2 md:gap-4 relative max-h-[90vh]">
                 <button
                   onClick={stopCamera}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-red-500"
+                  className="absolute top-2 right-2 md:top-4 md:right-4 text-gray-500 hover:text-red-500 bg-white rounded-full p-1 z-10"
                 >
-                  <X size={24} />
+                  <X size={18} className="md:w-6 md:h-6" />
                 </button>
 
-                <h3 className="text-xl font-bold text-[#0f2c63] text-center">Cámara / Subir Imagen</h3>
+                <h3 className="text-base md:text-xl font-bold text-[#0f2c63] text-center mt-1 md:mt-2">Cámara</h3>
 
                 <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
                   {!isStreaming ? (
                     <div className="text-white flex flex-col items-center gap-2">
-                      <p>Cámara inactiva</p>
-                      <button onClick={startCamera} className="px-4 py-2 bg-[#0f2c63] rounded-full text-white text-sm">
-                        Activar Cámara
+                      <p className="text-xs md:text-sm">Cámara inactiva</p>
+                      <button onClick={startCamera} className="px-3 py-1.5 md:px-4 md:py-2 bg-[#0f2c63] rounded-full text-white text-xs md:text-sm">
+                        Activar
                       </button>
                     </div>
                   ) : null}
@@ -414,13 +404,13 @@ export function Llm() {
                   />
                 </div>
 
-                <div className="flex justify-center gap-4 mt-2">
+                <div className="flex justify-center gap-2 mt-1 md:mt-2 flex-wrap">
                   <button
                     onClick={captureImage}
                     disabled={!isStreaming}
-                    className="flex items-center gap-2 bg-[#0f2c63] text-white px-6 py-2 rounded-full hover:bg-[#0d2452] disabled:opacity-50"
+                    className="flex items-center gap-1 md:gap-2 bg-[#0f2c63] text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-[#0d2452] disabled:opacity-50 text-xs md:text-base"
                   >
-                    <Camera size={20} /> Capturar
+                    <Camera size={14} className="md:w-5 md:h-5" /> Capturar
                   </button>
 
                   <div className="relative">
@@ -430,12 +420,13 @@ export function Llm() {
                       ref={fileInputRef}
                       className="hidden"
                       onChange={handleFileUpload}
+                      id="file-upload"
                     />
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-2 bg-gray-200 text-[#0f2c63] px-6 py-2 rounded-full hover:bg-gray-300"
+                      className="flex items-center gap-1 md:gap-2 bg-gray-200 text-[#0f2c63] px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-gray-300 text-xs md:text-base"
                     >
-                      <ImageIcon size={20} /> Subir Archivo
+                      <ImageIcon size={14} className="md:w-5 md:h-5" /> Subir
                     </button>
                   </div>
                 </div>
@@ -444,17 +435,6 @@ export function Llm() {
           )}
 
         </div>
-
-        {/* ============================
-            COLUMNA DERECHA: CANVAS (50%)
-        ============================ */}
-        {/* <div className="w-1/2 h-7/10 flex justify-center items-center p-6">
-          <div className="w-full h-full rounded-2xl shadow-lg border border-[#0f2c63]/20 overflow-hidden">
-            <Canvas shadows camera={{ position: [0, 0, 1], fov: 30 }}>
-              <Experience />
-            </Canvas>
-          </div>
-        </div> */}
 
       </div>
     </div>
