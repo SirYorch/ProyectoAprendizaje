@@ -33,7 +33,7 @@ export function Navbar() {
           `${linkClass} ${isActive ? activeClass : ""}`
         }
       >
-        entrenamiento
+        Entrenamiento
       </NavLink>
     </nav>
   );

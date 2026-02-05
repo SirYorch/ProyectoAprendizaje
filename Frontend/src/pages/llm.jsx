@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { Canvas } from "@react-three/fiber";
-import { Experience } from "../components/Experience";
 import { useChat } from "../hooks/useChat";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
