@@ -1,3 +1,5 @@
+/// Request tiene que ser la parte de entrenamiento
+
 import { useState } from "react";
 import { useChat } from "../hooks/useChat";
 

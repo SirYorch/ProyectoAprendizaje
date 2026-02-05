@@ -67,7 +67,7 @@ export function Llm() {
         {/* ============================
             COLUMNA IZQUIERDA: CHAT (50%)
         ============================ */}
-        <div className="w-1/2 flex flex-col items-center px-6 pt-6 text-[#0f2c63]">
+        <div className="w-full flex flex-col items-center px-6 pt-6 text-[#0f2c63]">
 
           <div className="text-3xl font-semibold mb-4">
             Hola, ¿en qué puedo ayudarte?
@@ -159,13 +159,13 @@ export function Llm() {
         {/* ============================
             COLUMNA DERECHA: CANVAS (50%)
         ============================ */}
-        <div className="w-1/2 h-7/10 flex justify-center items-center p-6">
+        {/* <div className="w-1/2 h-7/10 flex justify-center items-center p-6">
           <div className="w-full h-full rounded-2xl shadow-lg border border-[#0f2c63]/20 overflow-hidden">
             <Canvas shadows camera={{ position: [0, 0, 1], fov: 30 }}>
               <Experience />
             </Canvas>
           </div>
-        </div>
+        </div> */}
 
       </div>
     </div>

@@ -19,7 +19,7 @@ function App() {
           <Route path="/sobre" element={<Home />} />
           {/* luego crearás las otras */}
           <Route path="/llm" element={<Llm />} />
-          <Route path="/metodos" element={<Requests/>} />
+          <Route path="/entrenamiento" element={<Requests/>} />
         </Routes>
       </BrowserRouter>
 {/* 

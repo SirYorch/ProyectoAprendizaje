@@ -28,12 +28,12 @@ export function Navbar() {
       </NavLink>
 
       <NavLink
-        to="/metodos"
+        to="/entrenamiento"
         className={({ isActive }) =>
           `${linkClass} ${isActive ? activeClass : ""}`
         }
       >
-        Métodos
+        entrenamiento
       </NavLink>
     </nav>
   );

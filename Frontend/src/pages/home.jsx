@@ -4,9 +4,9 @@ export function Home() {
   return (
     <div>
       <div className="bg-[#0f2c63] text-white pt-60 pb-60 px-6 text-center flex flex-col items-center justify-center">
-        <h1 className="text-9xl font-extrabold mb-10">ARC</h1>
+        <h1 className="text-9xl font-extrabold mb-10">ProyectoAprendizaje</h1>
 
-        <p className="text-5xl font-semibold mb-6">Tu tienda de electrónicos avanzada</p>
+        <p className="text-5xl font-semibold mb-6">Productos cma</p>
         <p className="text-2xl">Universidad Politécnica Salesiana</p>
       </div>
 
