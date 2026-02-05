@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// const backendUrl = import.meta.env.VITE_API_URL || "https://6wnwj9t1-5000.brs.devtunnels.ms";
+const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const ChatContext = createContext();
 
@@ -13,35 +14,35 @@ export const ChatProvider = ({ children }) => {
   const chat = async (message, image = null) => {
     setLoading(true);
     console.log("datos enviados = " + message);
+    setLoading(false);
+    // try {
+    //   const data = await fetch(`${backendUrl}/api/chat`, {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({ message, image }),
+    //   });
 
-    try {
-      const data = await fetch(`${backendUrl}/api/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message, image }),
-      });
+    //   const response = await data.json();
+    //   const resp = response.messages;
 
-      const response = await data.json();
-      const resp = response.messages;
+    //   console.log("Respuesta del backend:", response);
 
-      console.log("Respuesta del backend:", resp);
+    //   // Verificar si hay archivo en la respuesta
+    //   if (resp[0]?.file) {
+    //     console.log("✓ Archivo recibido:", resp[0].file.name);
 
-      // Verificar si hay archivo en la respuesta
-      if (resp[0]?.file) {
-        console.log("✓ Archivo recibido:", resp[0].file.name);
+    //     // Descargar el archivo automáticamente
+    //     descargarArchivo(resp[0].file);
+    //   }
 
-        // Descargar el archivo automáticamente
-        descargarArchivo(resp[0].file);
-      }
-
-      setMessages((messages) => [...messages, ...resp]);
-    } catch (error) {
-      console.error("Error en chat:", error);
-    } finally {
-      setLoading(false);
-    }
+    //   setMessages((messages) => [...messages, ...resp]);
+    // } catch (error) {
+    //   console.error("Error en chat:", error);
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const predict = async (fileBlob) => {
@@ -49,7 +50,7 @@ export const ChatProvider = ({ children }) => {
       const formData = new FormData();
       formData.append('image', fileBlob);
 
-      const response = await fetch(`http://localhost:5000/predict`, {
+      const response = await fetch(`${backendUrl}/predict`, {
         method: 'POST',
         body: formData,
       });
@@ -59,7 +60,7 @@ export const ChatProvider = ({ children }) => {
       }
 
       const data = await response.json();
-      console.log("Prediction result:", data);
+      // console.log("Prediction result:", data);
       return data;
     } catch (error) {
       console.error("Error in prediction:", error);

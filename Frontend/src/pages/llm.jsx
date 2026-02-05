@@ -135,9 +135,20 @@ export function Llm() {
           const prediction = await predict(blob);
 
           if (prediction && prediction.label) {
+            // Mostrar resultado en el chat
+            console.log(prediction);
+            setMensajes((prev) => [...prev, {
+              remitente: "CHAT",
+              texto: `🔍 **Resultado de análisis:**\n\n**Objeto:** ${prediction.label}\n**Matches:** ${(prediction.matches)}`
+            }]);
+
             // Agregar contexto al texto que irá al chat
-            finalText = `${textoAEnviar} \n\n[System: The user sent an image of: ${prediction.label}. Match confidence: ${prediction.probability}]`;
+            finalText = `${textoAEnviar} \n\n[System: The user sent an image of: ${prediction.label}.`;
           } else {
+            setMensajes((prev) => [...prev, {
+              remitente: "CHAT",
+              texto: `⚠️ No se pudo identificar el objeto en la imagen.`
+            }]);
             finalText = `${textoAEnviar} \n\n[System: The user sent an image but it could not be identified]`;
           }
         }
@@ -161,7 +172,11 @@ export function Llm() {
   const startCamera = async () => {
     try {
       setCameraOpen(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment"
+        }
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setIsStreaming(true);
