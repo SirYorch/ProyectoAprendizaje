@@ -7,7 +7,8 @@ import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognitio
 import { Mic, Camera, Image as ImageIcon, X, Video, Circle, Square } from "lucide-react";
 
 // const backendUrl = import.meta.env.VITE_API_URL || "https://6wnwj9t1-5000.brs.devtunnels.ms";
-const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const backendUrl = import.meta.env.VITE_API_URL || "https://z16tt1w6-5000.use2.devtunnels.ms";
+// const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function Llm() {
   const [mensajes, setMensajes] = useState([]);
@@ -37,7 +38,7 @@ export function Llm() {
   const silenceTimer = useRef(null);
 
   // Usar el hook useChat
-  const { chat, predict, loading, message } = useChat();
+  const { chat, predict, loading } = useChat();
 
   // Helper to convert dataURI to Blob
   const dataURItoBlob = (dataURI) => {
@@ -55,18 +56,6 @@ export function Llm() {
       return null;
     }
   };
-
-  // Escuchar cambios en 'message' para agregar respuestas del bot al chat
-  useEffect(() => {
-    if (message && message.text) {
-      const respuestaBot = {
-        remitente: "CHAT",
-        texto: message.text,
-        archivo: message.file || null // Guardar info del archivo si existe
-      };
-      setMensajes((prev) => [...prev, respuestaBot]);
-    }
-  }, [message]);
 
   // Sync transcript to input
   useEffect(() => {
@@ -93,12 +82,19 @@ export function Llm() {
     };
 
     setMensajes((prev) => [...prev, nuevoMensaje]);
-    // Send logic
-    chat(finalText, imgSrc);
+
+    // Send logic with callback
+    chat(finalText, null, (respuestaTexto) => {
+      setMensajes((prev) => [...prev, {
+        remitente: "CHAT",
+        texto: respuestaTexto
+      }]);
+    });
 
     setTexto("");
     resetTranscript();
   };
+
 
 
   const enviarMensaje = async (arg1 = null, arg2 = null) => {
@@ -145,18 +141,21 @@ export function Llm() {
           formData.append('video', blob, 'recording.webm');
 
           try {
-            const response = await fetch(`${backendUrl}/video`, {
+            const response = await fetch(`${backendUrl}/analyze_video`, {
               method: 'POST',
               body: formData,
             });
 
+
             if (response.ok) {
               const data = await response.json();
+
+              console.log(data);
               setMensajes((prev) => [...prev, {
                 remitente: "CHAT",
-                texto: `🎥 **Video procesado exitosamente**`
+                texto: data.script
               }]);
-              finalText = `${textoAEnviar} \n\n[System: The user sent a video]`;
+              // finalText = `${textoAEnviar} \n\n[System: The user sent a video]`;
             } else {
               setMensajes((prev) => [...prev, {
                 remitente: "CHAT",
@@ -196,7 +195,14 @@ export function Llm() {
       }
 
       // 3. Luego el texto se envía "a donde se estaba enviando" (Chat API)
-      await chat(finalText);
+      await chat(finalText, null, (respuestaTexto) => {
+        // Agregar la respuesta del backend directamente al chat
+        setMensajes((prev) => [...prev, {
+          remitente: "CHAT",
+          texto: respuestaTexto
+        }]);
+      });
+
 
     } catch (err) {
       console.error("Error al enviar mensaje:", err);

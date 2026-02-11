@@ -5,7 +5,8 @@ import { Upload, Loader2, CheckCircle2, Trash2, Eye, History, Undo } from "lucid
 
 export function Requests() {
     // const URL_Link = "https://6wnwj9t1-5000.brs.devtunnels.ms";
-    const URL_Link = "http://localhost:5000";
+    const URL_Link = import.meta.env.VITE_API_URL || "https://z16tt1w6-5000.use2.devtunnels.ms";
+    // const URL_Link = "http://localhost:5000";
     const [image, setImage] = useState(null);
     const [label, setLabel] = useState("");
     const [loading, setLoading] = useState(false);

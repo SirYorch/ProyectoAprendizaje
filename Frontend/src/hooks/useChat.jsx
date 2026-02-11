@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 // const backendUrl = import.meta.env.VITE_API_URL || "https://6wnwj9t1-5000.brs.devtunnels.ms";
-const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const backendUrl = import.meta.env.VITE_API_URL || "https://z16tt1w6-5000.use2.devtunnels.ms";
+
+// const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const ChatContext = createContext();
 
@@ -11,38 +13,45 @@ export const ChatProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [cameraZoomed, setCameraZoomed] = useState(true);
 
-  const chat = async (message, image = null) => {
+  const chat = async (message, image = null, onResponse = null) => {
     setLoading(true);
     console.log("datos enviados = " + message);
-    setLoading(false);
-    // try {
-    //   const data = await fetch(`${backendUrl}/api/chat`, {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({ message, image }),
-    //   });
+    try {
+      if (message != "") {
+        const data = await fetch(`${backendUrl}/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ message, image }),
+        });
 
-    //   const response = await data.json();
-    //   const resp = response.messages;
+        const response = await data.json();
+        const resp = response.content;
 
-    //   console.log("Respuesta del backend:", response);
+        console.log("Respuesta completa del backend:", response);
+        console.log("Contenido (resp):", resp);
 
-    //   // Verificar si hay archivo en la respuesta
-    //   if (resp[0]?.file) {
-    //     console.log("✓ Archivo recibido:", resp[0].file.name);
-
-    //     // Descargar el archivo automáticamente
-    //     descargarArchivo(resp[0].file);
-    //   }
-
-    //   setMessages((messages) => [...messages, ...resp]);
-    // } catch (error) {
-    //   console.error("Error en chat:", error);
-    // } finally {
-    //   setLoading(false);
-    // }
+        // Si hay un callback, usarlo directamente (para chat de texto)
+        if (onResponse) {
+          onResponse(resp);
+        } else {
+          // Si no hay callback, usar el sistema de cola (para avatar)
+          const messageObject = {
+            text: resp,
+            audio: null,
+            lipsync: null,
+            facialExpression: "default",
+            animation: "Talking"
+          };
+          setMessages((messages) => [...messages, messageObject]);
+        }
+      }
+    } catch (error) {
+      console.error("Error en chat:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const predict = async (fileBlob) => {
