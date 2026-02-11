@@ -4,7 +4,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import { Mic, Camera, Image as ImageIcon, X } from "lucide-react";
+import { Mic, Camera, Image as ImageIcon, X, Video, Circle, Square } from "lucide-react";
+
+// const backendUrl = import.meta.env.VITE_API_URL || "https://6wnwj9t1-5000.brs.devtunnels.ms";
+const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export function Llm() {
   const [mensajes, setMensajes] = useState([]);
@@ -15,8 +18,12 @@ export function Llm() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [imgSrc, setImgSrc] = useState(null); // Preview data (base64)
+  const [videoSrc, setVideoSrc] = useState(null); // Video preview data
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const videoFileInputRef = useRef(null);
 
   // Speech Recognition
   const {
@@ -107,14 +114,16 @@ export function Llm() {
 
     const textoAEnviar = textoOverride !== null ? textoOverride : texto;
     const imagenAEnviar = imageOverride !== null ? imageOverride : imgSrc;
+    const videoAEnviar = videoSrc;
 
-    if (!textoAEnviar.trim() && !imagenAEnviar) return;
+    if (!textoAEnviar.trim() && !imagenAEnviar && !videoAEnviar) return;
 
     // 1. UI: Agregar mensaje del usuario al historial inmediatamente
     const nuevoMensaje = {
       remitente: "me",
       texto: textoAEnviar,
-      imagen: imagenAEnviar // Guardar imagen para mostrar en chat
+      imagen: imagenAEnviar, // Guardar imagen para mostrar en chat
+      video: videoAEnviar // Guardar video para mostrar en chat
     };
 
     setMensajes((prev) => [...prev, nuevoMensaje]);
@@ -122,13 +131,45 @@ export function Llm() {
     // Limpiar estado
     setTexto("");
     setImgSrc(null);
+    setVideoSrc(null);
     setError("");
 
     try {
       let finalText = textoAEnviar;
 
-      // 2. Lógica secuencial: Si hay imagen, enviar a /predict
-      if (imagenAEnviar) {
+      // 2. Lógica secuencial: Si hay video, enviar a /video
+      if (videoAEnviar) {
+        const blob = dataURItoBlob(videoAEnviar);
+        if (blob) {
+          const formData = new FormData();
+          formData.append('video', blob, 'recording.webm');
+
+          try {
+            const response = await fetch(`${backendUrl}/video`, {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setMensajes((prev) => [...prev, {
+                remitente: "CHAT",
+                texto: `🎥 **Video procesado exitosamente**`
+              }]);
+              finalText = `${textoAEnviar} \n\n[System: The user sent a video]`;
+            } else {
+              setMensajes((prev) => [...prev, {
+                remitente: "CHAT",
+                texto: `⚠️ Error al procesar el video.`
+              }]);
+            }
+          } catch (err) {
+            console.error("Error uploading video:", err);
+          }
+        }
+      }
+      // Si hay imagen, enviar a /predict
+      else if (imagenAEnviar) {
         const blob = dataURItoBlob(imagenAEnviar);
         if (blob) {
           // El usuario pide "siempre se envía primero la imagen" (a predict)
@@ -220,11 +261,76 @@ export function Llm() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImgSrc(reader.result);
+        if (file.type.startsWith('video/')) {
+          setVideoSrc(reader.result);
+        } else {
+          setImgSrc(reader.result);
+        }
         // Also close camera modal if open (though usually this input is separate)
         if (cameraOpen) stopCamera();
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleVideoFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVideoSrc(reader.result);
+        if (cameraOpen) stopCamera();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const startVideoRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: true
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setIsStreaming(true);
+
+        const recorder = new MediaRecorder(stream, {
+          mimeType: 'video/webm;codecs=vp8,opus'
+        });
+
+        const chunks = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            chunks.push(e.data);
+          }
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setVideoSrc(reader.result);
+            stopCamera();
+          };
+          reader.readAsDataURL(blob);
+        };
+
+        setMediaRecorder(recorder);
+        recorder.start();
+        setIsRecording(true);
+      }
+    } catch (err) {
+      console.error("Error starting video recording:", err);
+      alert("No se pudo acceder a la cámara/micrófono. Verifique los permisos.");
+    }
+  };
+
+  const stopVideoRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
     }
   };
 
@@ -273,6 +379,14 @@ export function Llm() {
                         <img
                           src={m.imagen}
                           alt="User upload"
+                          className="max-w-full h-auto rounded-lg mb-1 md:mb-2 border border-[#0f2c63]/20"
+                          style={{ maxHeight: '120px', objectFit: 'contain' }}
+                        />
+                      )}
+                      {m.video && (
+                        <video
+                          src={m.video}
+                          controls
                           className="max-w-full h-auto rounded-lg mb-1 md:mb-2 border border-[#0f2c63]/20"
                           style={{ maxHeight: '120px', objectFit: 'contain' }}
                         />
@@ -349,6 +463,19 @@ export function Llm() {
               </div>
             )}
 
+            {/* Video Preview */}
+            {videoSrc && (
+              <div className="relative w-fit mx-auto md:mx-0">
+                <video src={videoSrc} controls className="h-20 md:h-32 rounded-lg border border-[#0f2c63]/20" />
+                <button
+                  onClick={() => setVideoSrc(null)}
+                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <X size={10} className="md:w-3 md:h-3" />
+                </button>
+              </div>
+            )}
+
             <div className="flex w-full gap-1.5 md:gap-2 items-center">
               <input
                 type="text"
@@ -378,6 +505,22 @@ export function Llm() {
               >
                 <Camera size={16} className="md:w-6 md:h-6" />
               </button>
+
+              {/* Video Upload Button */}
+              <button
+                onClick={() => videoFileInputRef.current?.click()}
+                className="p-1.5 md:p-3 rounded-full bg-gray-200 text-[#0f2c63] hover:bg-gray-300 transition-colors shrink-0"
+                title="Subir Video"
+              >
+                <Video size={16} className="md:w-6 md:h-6" />
+              </button>
+              <input
+                type="file"
+                accept="video/*"
+                ref={videoFileInputRef}
+                className="hidden"
+                onChange={handleVideoFileUpload}
+              />
 
               <button
                 onClick={enviarMensaje}
@@ -422,16 +565,34 @@ export function Llm() {
                 <div className="flex justify-center gap-2 mt-1 md:mt-2 flex-wrap">
                   <button
                     onClick={captureImage}
-                    disabled={!isStreaming}
+                    disabled={!isStreaming || isRecording}
                     className="flex items-center gap-1 md:gap-2 bg-[#0f2c63] text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-[#0d2452] disabled:opacity-50 text-xs md:text-base"
                   >
-                    <Camera size={14} className="md:w-5 md:h-5" /> Capturar
+                    <Camera size={14} className="md:w-5 md:h-5" /> Capturar Foto
                   </button>
+
+                  {!isRecording ? (
+                    <button
+                      onClick={startVideoRecording}
+                      disabled={isStreaming}
+                      className="flex items-center gap-1 md:gap-2 bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-red-700 disabled:opacity-50 text-xs md:text-base"
+                    >
+                      <Circle size={14} className="md:w-5 md:h-5" /> Grabar Video
+                    </button>
+                  ) : (
+                    <button
+                      onClick={stopVideoRecording}
+                      className="flex items-center gap-1 md:gap-2 bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-red-700 animate-pulse text-xs md:text-base"
+                    >
+                      <Square size={14} className="md:w-5 md:h-5" /> Detener
+                    </button>
+                  )}
 
                   <div className="relative">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
+                      capture="environment"
                       ref={fileInputRef}
                       className="hidden"
                       onChange={handleFileUpload}
@@ -441,7 +602,7 @@ export function Llm() {
                       onClick={() => fileInputRef.current?.click()}
                       className="flex items-center gap-1 md:gap-2 bg-gray-200 text-[#0f2c63] px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-gray-300 text-xs md:text-base"
                     >
-                      <ImageIcon size={14} className="md:w-5 md:h-5" /> Subir
+                      <ImageIcon size={14} className="md:w-5 md:h-5" /> Subir Archivo
                     </button>
                   </div>
                 </div>
